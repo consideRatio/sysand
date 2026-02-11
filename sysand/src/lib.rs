@@ -58,6 +58,7 @@ use crate::{
         init::command_init,
         lock::command_lock,
         print_root::command_print_root,
+        publish::command_publish,
         remove::command_remove,
         sources::{command_sources_env, command_sources_project},
         sync::command_sync,
@@ -612,6 +613,27 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
             no_index_symbols,
         } => command_include(paths, add_checksum, !no_index_symbols, ctx),
         cli::Command::Exclude { paths } => command_exclude(paths, ctx),
+        cli::Command::Publish { path, index } => {
+            let current_project = ctx.current_project.ok_or(CliError::MissingProjectCurrentDir)?;
+            let kpar_path = if let Some(path) = path {
+                path
+            } else {
+                let mut output_dir = ctx
+                    .current_workspace
+                    .as_ref()
+                    .map(Workspace::root_path)
+                    .unwrap_or_else(|| &current_project.project_path)
+                    .join("output");
+                let name = sysand_core::build::default_kpar_file_name(&current_project)?;
+                output_dir.push(name);
+                output_dir
+            };
+            if !kpar_path.is_file() {
+                bail!("kpar file not found at `{kpar_path}`, run `sysand build` first");
+            }
+            let index_url = index.unwrap_or_else(|| DEFAULT_INDEX_URL.to_string());
+            command_publish(kpar_path, &index_url, basic_auth_policy, client, runtime)
+        }
         cli::Command::Build {
             path,
             compression,
