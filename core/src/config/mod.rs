@@ -15,7 +15,17 @@ pub struct Config {
     pub indexes: Vec<Index>,
     #[serde(rename = "project", skip_serializing_if = "Vec::is_empty", default)]
     pub projects: Vec<ConfigProject>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub build: Option<BuildConfig>,
     // pub auth: Option<Vec<AuthSource>>,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BuildConfig {
+    /// Override the README source filename.
+    /// Default: "README.md". Set to empty string to disable README bundling.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub readme: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -31,9 +41,13 @@ impl Config {
         let Config {
             mut indexes,
             mut projects,
+            build,
         } = config;
         self.indexes.append(&mut indexes);
         self.projects.append(&mut projects);
+        if build.is_some() {
+            self.build = build;
+        }
 
         // if let Some(auth) = config.auth {
         //     self.auth = Some(auth.clone());
@@ -153,6 +167,7 @@ mod tests {
                     src_path: "./path/to project".into(),
                 }],
             }],
+            build: None,
             // auth: None,
         };
         defaults.merge(config.clone());

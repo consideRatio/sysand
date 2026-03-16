@@ -224,6 +224,7 @@ mod tests {
                 ..Default::default()
             }],
             projects: vec![],
+            build: None,
             // auth: None,
         };
         config_file.write_all(toml::to_string_pretty(&config)?.as_bytes())?;
@@ -252,6 +253,7 @@ mod tests {
                 identifiers: vec![iri.to_string()],
                 sources: vec![source],
             }],
+            build: None,
         };
 
         assert_eq!(
@@ -277,6 +279,7 @@ mod tests {
                 identifiers: vec![iri.to_string()],
                 sources: vec![source],
             }],
+            build: None,
         };
         config_file.write_all(toml::to_string_pretty(&config)?.as_bytes())?;
 

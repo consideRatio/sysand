@@ -617,6 +617,10 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
             compression,
             allow_path_usage,
         } => {
+            // Resolve README config: None = default "README.md",
+            // Some("") = disabled, Some("CUSTOM.md") = custom filename.
+            let readme_override = config.build.as_ref().and_then(|b| b.readme.as_deref());
+
             if let Some(current_project) = ctx.current_project {
                 // Even if we are in a workspace, the project takes precedence.
                 let path = if let Some(path) = path {
@@ -635,13 +639,16 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                     output_dir.push(name);
                     output_dir
                 };
-                let readme_path = current_project.project_path.join("README.md");
+                let readme_source_path = resolve_readme_path(
+                    readme_override,
+                    &current_project.project_path,
+                )?;
                 command_build_for_project(
                     path,
                     compression.into(),
                     current_project,
                     allow_path_usage,
-                    Some(readme_path.as_ref()),
+                    readme_source_path.as_deref(),
                 )
             } else {
                 // If the workspace is also missing, report an error about
@@ -655,11 +662,17 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                 if !wrapfs::is_dir(&output_dir)? {
                     wrapfs::create_dir(&output_dir)?;
                 }
+                let readme_filename = match readme_override {
+                    None => Some("README.md"),
+                    Some("") => None,
+                    Some(name) => Some(name),
+                };
                 command_build_for_workspace(
                     output_dir,
                     compression.into(),
                     current_workspace,
                     allow_path_usage,
+                    readme_filename,
                 )
             }
         }
@@ -728,6 +741,37 @@ pub fn get_or_create_env(project_root: impl AsRef<Utf8Path>) -> Result<LocalDire
         Some(env) => Ok(env),
         None => command_env(project_root.join(DEFAULT_ENV_NAME)),
     }
+}
+
+/// Resolve the README source path for a project build.
+///
+/// - `None` (no config) → default `README.md` at project root
+/// - `Some("")` → disabled, returns `None`
+/// - `Some("CUSTOM.md")` → that filename at project root
+///
+/// Validates that the resolved path does not escape the project root.
+fn resolve_readme_path(
+    readme_override: Option<&str>,
+    project_root: &Utf8Path,
+) -> Result<Option<Utf8PathBuf>> {
+    let filename = match readme_override {
+        Some("") => return Ok(None),
+        Some(name) => name,
+        None => "README.md",
+    };
+
+    let readme_path = project_root.join(filename);
+
+    // Validate that the path does not escape the project root via `..` traversal
+    for component in std::path::Path::new(filename).components() {
+        if matches!(component, std::path::Component::ParentDir) {
+            bail!(
+                "README path `{filename}` must not contain `..` components"
+            );
+        }
+    }
+
+    Ok(Some(readme_path))
 }
 
 fn get_log_level(verbose: bool, quiet: bool) -> log::LevelFilter {

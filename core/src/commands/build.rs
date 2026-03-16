@@ -306,11 +306,12 @@ pub fn do_build_workspace_kpars<P: AsRef<Utf8Path>>(
     compression: KparCompressionMethod,
     canonicalise: bool,
     allow_path_usage: bool,
+    readme_filename: Option<&str>,
 ) -> Result<Vec<LocalKParProject>, KParBuildError<LocalSrcError>> {
     let mut result = Vec::new();
     for project in workspace.projects() {
         let project_path = workspace.root_path().join(&project.path);
-        let readme_source_path = project_path.join("README.md");
+        let readme_source_path = readme_filename.map(|name| project_path.join(name));
         let project = LocalSrcProject {
             nominal_path: None,
             project_path,
@@ -323,7 +324,7 @@ pub fn do_build_workspace_kpars<P: AsRef<Utf8Path>>(
             compression,
             canonicalise,
             allow_path_usage,
-            Some(readme_source_path.as_ref()),
+            readme_source_path.as_deref(),
         )?;
         result.push(kpar_project);
     }

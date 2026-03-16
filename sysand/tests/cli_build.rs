@@ -247,6 +247,49 @@ fn project_build_with_readme() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Build a project with a custom README filename via config
+#[test]
+fn project_build_with_custom_readme() -> Result<(), Box<dyn std::error::Error>> {
+    let (_temp_dir, cwd, out) =
+        run_sysand(["init", "--version", "1.2.3", "--name", "test_custom_readme"], None)?;
+
+    std::fs::write(cwd.join("test.sysml"), b"package P;\n")?;
+    std::fs::write(
+        cwd.join("PUBLIC_README.md"),
+        b"# Public Readme\nCustom content\n",
+    )?;
+
+    out.assert().success();
+
+    let out = run_sysand_in(&cwd, ["include", "--no-index-symbols", "test.sysml"], None)?;
+    out.assert().success();
+
+    let cfg_path = cwd.join("sysand.toml");
+    std::fs::write(
+        &cfg_path,
+        b"[build]\nreadme = \"PUBLIC_README.md\"\n",
+    )?;
+
+    let out = run_sysand_in(
+        &cwd,
+        ["build", "./test_build.kpar"],
+        Some(cfg_path.as_str()),
+    )?;
+    out.assert()
+        .success()
+        .stderr(predicate::str::contains("Including readme from"));
+
+    // Verify the KPAR contains README.md (renamed from PUBLIC_README.md)
+    let file = std::fs::File::open(cwd.join("test_build.kpar"))?;
+    let mut archive = zip::ZipArchive::new(file)?;
+    let mut readme = archive.by_name("README.md")?;
+    let mut content = String::new();
+    readme.read_to_string(&mut content)?;
+    assert_eq!(content, "# Public Readme\nCustom content\n");
+
+    Ok(())
+}
+
 /// Build a project without any README file — should succeed
 #[test]
 fn project_build_without_readme() -> Result<(), Box<dyn std::error::Error>> {

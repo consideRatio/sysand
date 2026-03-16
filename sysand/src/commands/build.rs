@@ -40,6 +40,7 @@ pub fn command_build_for_workspace<P: AsRef<Utf8Path>>(
     compression: KparCompressionMethod,
     workspace: Workspace,
     allow_path_usage: bool,
+    readme_filename: Option<&str>,
 ) -> Result<()> {
     log::warn!(
         "Workspaces are an experimental feature\n\
@@ -47,7 +48,14 @@ pub fn command_build_for_workspace<P: AsRef<Utf8Path>>(
         releases. For the status of this feature, see\n\
         https://github.com/sensmetry/sysand/issues/101."
     );
-    do_build_workspace_kpars(&workspace, &path, compression, true, allow_path_usage)?;
+    do_build_workspace_kpars(
+        &workspace,
+        &path,
+        compression,
+        true,
+        allow_path_usage,
+        readme_filename,
+    )?;
 
     Ok(())
 }
