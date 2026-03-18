@@ -113,7 +113,7 @@ sysand.project.info.maintainer.list()        # explicit
 **Proposed fix:** Two categories:
 
 - Side-effect control: `--no-lock` + `--no-sync` → `--update manifest|lock|sync`
-- Dependency control: `--no-deps` → `--dependency-mode all|none`
+- Usage control: `--no-deps` → `--usage-mode all|none`
 - Validation relaxation: `--no-semver`, `--no-spdx` → `--allow-non-semver`,
   `--allow-non-spdx` (still booleans but positive framing)
 - Symbol control: `--no-index-symbols` → `--index-symbols on|off`
@@ -124,8 +124,8 @@ sysand.project.info.maintainer.list()        # explicit
 
 | Command              | `--path` means                                    |
 | -------------------- | ------------------------------------------------- |
-| `add --path`         | Path to project being _added as a dependency_     |
-| `remove --path`      | Path to project being _removed from dependencies_ |
+| `add --path`         | Path to project being _added as a usage_       |
+| `remove --path`      | Path to project being _removed from usages_    |
 | `clone --path`       | Path to project being _cloned from_               |
 | `info --path`        | Path to project being _inspected_                 |
 | `env install --path` | Path to interchange project to install            |
@@ -143,8 +143,8 @@ All semantically different uses of the same option name.
 
 ```
 sysand init          (project lifecycle)
-sysand add           (dependency management)
-sysand remove        (dependency management)
+sysand add           (usage management)
+sysand remove        (usage management)
 sysand include       (source file management)
 sysand exclude       (source file management)
 sysand build         (build)
@@ -170,7 +170,7 @@ sysand project init|show|root|clone
 sysand project source add|remove|list
 sysand project info <field> get|set|add|remove|clear|list
 sysand project metadata <field> get|set|clear|list
-sysand dependency add|remove|list
+sysand usage add|remove|list
 sysand lock update
 sysand env create|sync|install|uninstall|list
 sysand env source list
@@ -243,8 +243,8 @@ directory. This is a side-effect of the command existing.
 | Current CLI                            | Issues   | Proposed CLI                                           |
 | -------------------------------------- | -------- | ------------------------------------------------------ |
 | `sysand init [PATH]`                   | —        | `sysand project init <PATH>`                           |
-| `sysand add <IRI> [VER]`               | #3 #4 #7 | `sysand dependency add <IRI> [VER] --update sync`      |
-| `sysand remove <IRI>`                  | #4       | `sysand dependency remove <IRI>`                       |
+| `sysand add <IRI> [VER]`               | #3 #4 #7 | `sysand usage add <IRI> [VER] --update sync`           |
+| `sysand remove <IRI>`                  | #4       | `sysand usage remove <IRI>`                            |
 | `sysand clone <LOC>`                   | #3 #4    | `sysand project clone <LOC>`                           |
 | `sysand include [PATHS]`               | #3 #5    | `sysand project source add <PATHS>`                    |
 | `sysand exclude [PATHS]`               | #5       | `sysand project source remove <PATHS>`                 |
@@ -263,7 +263,7 @@ directory. This is a side-effect of the command existing.
 | `sysand sources`                       | #3 #5    | `sysand project source list`                           |
 | `sysand print-root`                    | #5       | `sysand project root`                                  |
 | `sysand env` (no subcmd)               | #10      | `sysand env create`                                    |
-| `sysand env install`                   | #3       | `sysand env install` (with `--dependency-mode`)        |
+| `sysand env install`                   | #3       | `sysand env install` (with `--usage-mode`)             |
 | `sysand env sources <IRI>`             | #5       | `sysand env source list <IRI>`                         |
 
 ---
@@ -277,5 +277,5 @@ directory. This is a side-effect of the command existing.
 | **Stable option names** (Rule 3)         | `--path` means 5 different things                            |
 | **Subcommands over mode flags** (Rule 4) | `build` auto-detects; `info` uses `--set`/`--add`/`--remove` |
 | **Positive enums** (Rule 5)              | 10 `--no-*` flags                                            |
-| **Side effects explicit** (Rule 7)       | `add` implicitly locks + syncs                               |
+| **Side effects explicit** (Rule 7)       | `add` (usage add) implicitly locks + syncs                   |
 | **Selectors over discovery** (Rule 8)    | `build`, `lock`, `sync`, `sources` all rely on cwd           |

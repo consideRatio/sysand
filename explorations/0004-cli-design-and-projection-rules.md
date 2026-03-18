@@ -76,19 +76,19 @@ Bad:   sysand build --workspace
 Replace `--no-lock`, `--no-sync` with an explicit mode enum.
 
 ```
-Good:  sysand dependency add <IRI> --update sync
-       sysand dependency add <IRI> --update manifest
-Bad:   sysand dependency add <IRI> --no-lock --no-sync
+Good:  sysand usage add <IRI> --update sync
+       sysand usage add <IRI> --update manifest
+Bad:   sysand usage add <IRI> --no-lock --no-sync
 ```
 
-Similarly: `--dependency-mode all|none` instead of `--no-deps`.
+Similarly: `--usage-mode all|none` instead of `--no-deps`.
 
 ### Rule 6: Required data as positional args, modifiers as options
 
 ```
-sysand dependency add <IRI> [<VERSION_REQ>] --update sync --project .
-                      ^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^
-                      required  optional     modifiers (named options)
+sysand usage add <IRI> [<VERSION_REQ>] --update sync --project .
+                 ^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^
+                 required  optional     modifiers (named options)
 ```
 
 Keep positional args to 1-2 at most. If it needs more, the design is probably wrong.
@@ -98,9 +98,9 @@ Keep positional args to 1-2 at most. If it needs more, the design is probably wr
 If a command mutates one thing and triggers other changes, make that explicit.
 
 ```
-Good:  sysand dependency add <IRI> --update sync   (explicitly: update manifest + lock + env)
-       sysand dependency add <IRI> --update lock    (explicitly: update manifest + lock only)
-Bad:   sysand add <IRI>                             (implicitly: does it lock? sync? who knows?)
+Good:  sysand usage add <IRI> --update sync   (explicitly: update manifest + lock + env)
+       sysand usage add <IRI> --update lock    (explicitly: update manifest + lock only)
+Bad:   sysand add <IRI>                        (implicitly: does it lock? sync? who knows?)
 ```
 
 ### Rule 8: Selectors over ambient discovery
