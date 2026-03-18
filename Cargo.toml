@@ -4,9 +4,6 @@ members = [
   "sysand",
   "core",
   "macros",
-  "bindings/py",
-  "bindings/js",
-  "bindings/java",
 ]
 default-members = ["sysand", "core"]
 

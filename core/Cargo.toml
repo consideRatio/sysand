@@ -17,9 +17,6 @@ std = ["log/std", "wasm-bindgen?/std", "thiserror/std", "typed-path/std", "url/s
 # Whether we should be more lenient when validating data in cases where the
 # KerML specification is vague.
 lenient_checks = []
-# Binding support (but not binding libraries themselves)
-python = ["dep:pyo3"]
-js = ["dep:wasm-bindgen"]
 filesystem = ["dep:camino-tempfile", "dep:dirs", "dep:zip"]
 networking = ["dep:reqwest", "dep:gix"] # "dep:reqwest-middleware", "dep:partialzip"
 # Different compression methods for creating KPARs

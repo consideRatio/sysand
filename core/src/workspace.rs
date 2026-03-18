@@ -1,15 +1,12 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use fluent_uri::Iri;
 
-#[cfg(feature = "python")]
-use pyo3::{FromPyObject, IntoPyObject};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::project::utils::{FsIoError, wrapfs};
 
 #[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "python", derive(FromPyObject, IntoPyObject))]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceProjectInfoG<Iri> {
     pub path: String,
@@ -23,7 +20,6 @@ pub enum WorkspaceValidationError {
 }
 
 #[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "python", derive(FromPyObject, IntoPyObject))]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceInfoG<Iri> {
     pub projects: Vec<WorkspaceProjectInfoG<Iri>>,

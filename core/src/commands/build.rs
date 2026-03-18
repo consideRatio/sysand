@@ -19,7 +19,6 @@ use crate::{
 // in part to have less boilerplate, in part because the old
 // Python we use doesn't have pattern matching which ensures
 // all cases are covered
-// #[cfg_attr(feature = "python", pyclass(eq))]
 pub enum KparCompressionMethod {
     /// Store the files as is
     Stored,
