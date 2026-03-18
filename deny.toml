@@ -1,3 +1,14 @@
+# cargo-deny is a tool to lint Rust dependencies for license compliance,
+# security advisories, duplicate crates, and untrusted sources.
+#
+# Config reference: https://embarkstudios.github.io/cargo-deny/checks/index.html
+#
+# Common tasks
+#
+# - Run all checks:   cargo deny check
+# - Check licenses:   cargo deny check licenses
+# - Check advisories: cargo deny check advisories
+#
 [graph]
 targets = [
     "aarch64-apple-darwin",
