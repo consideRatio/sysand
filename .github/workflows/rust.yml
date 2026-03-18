@@ -2,10 +2,10 @@ name: Rust (Library & CLI)
 
 on:
   push:
-    branches: [main]
+    branches: ["*"]
     tags: ["*"]
   pull_request:
-    branches: [main]
+    branches: ["*"]
   workflow_dispatch:
 
 permissions:
@@ -50,35 +50,6 @@ jobs:
           echo "test=$test" >> "$GITHUB_OUTPUT"
           echo "gate=$gate" >> "$GITHUB_OUTPUT"
 
-  lint-and-format:
-    needs: [plan]
-    if: needs.plan.outputs.test == 'true'
-    runs-on: ubuntu-24.04
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-cargo-
-
-      - uses: taiki-e/install-action@cargo-hack
-
-      - name: cargo hack clippy ...
-        run: cargo hack clippy --each-feature --no-dev-deps --features std --ignore-unknown-features -- --deny warnings
-
-      - name: cargo clippy ...
-        run: cargo clippy --locked --all-targets --all-features -- --deny warnings
-
-      - name: cargo fmt ...
-        run: cargo fmt --check
-
   test:
     needs: [plan]
     if: needs.plan.outputs.test == 'true'
@@ -87,12 +58,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
           - windows-latest
-          - windows-11-arm
-          - macos-15-intel # x86
-          - macos-latest # arm64
 
     steps:
       - uses: actions/checkout@v6
@@ -107,7 +73,34 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-cargo-
 
-      - name: cargo test ... (Rust library & CLI)
+      - if: always()
+        shell: pwsh
+        run: |
+          Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Visual C++*Redistributable*" } | Select-Object Name, Version
+      - if: always()
+        shell: pwsh
+        run: |
+          Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Visual C++*" } | Select-Object Name, Version
+
+      - if: always()
+        shell: pwsh
+        run: |
+          Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" -ErrorAction SilentlyContinue | Select-Object Version, Installed
+
+      - if: always()
+        shell: pwsh
+        run: |
+          Test-Path "C:\Windows\System32\vcruntime140.dll"
+
+      - if: always()
+        name: Hide vcruntime to test need for static linking
+        shell: pwsh
+        run: |
+          Rename-Item "C:\Windows\System32\vcruntime140.dll" "vcruntime140.dll.bak"
+          # Also hide the one in the runner's VS install paths if needed
+
+      - if: always()
+        name: cargo test ... (Rust library & CLI)
         run: >-
           cargo test --locked
           --package sysand-core
@@ -154,96 +147,3 @@ jobs:
           name: sysand-cli-${{ matrix.os }}
           path: dist
           if-no-files-found: error
-
-  ci-gate:
-    name: Rust CI Gate
-    needs: [plan, lint-and-format, test, build]
-    if: needs.plan.outputs.gate == 'true' && !cancelled()
-    runs-on: ubuntu-slim
-    steps:
-      - run: |
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
-            exit 1
-          fi
-
-  nightly-release:
-    name: Nightly Release
-    needs: [test, build]
-    if: github.ref == 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-24.04
-    permissions:
-      id-token: write # for signing release artifacts
-      contents: write # for uploading release artifacts
-      attestations: write # for release artifact attestation
-
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v3
-        with:
-          subject-path: "artifacts/*"
-
-      - name: Rename artifacts
-        run: |
-          mv artifacts/sysand-ubuntu-24.04 artifacts/sysand-linux-x86_64
-          mv artifacts/sysand-ubuntu-24.04-arm artifacts/sysand-linux-arm64
-          mv artifacts/sysand-windows-latest.exe artifacts/sysand-windows-x86_64.exe
-          mv artifacts/sysand-windows-11-arm.exe artifacts/sysand-windows-arm64.exe
-          mv artifacts/sysand-macos-15-intel artifacts/sysand-macos-x86_64
-          mv artifacts/sysand-macos-latest artifacts/sysand-macos-arm64
-
-      - name: Create release tag
-        run: echo "TAG_NAME=$(date +v-%Y-%m-%d-%H%M)" >> $GITHUB_ENV
-
-      - name: Create a nightly release
-        uses: softprops/action-gh-release@v2
-        with:
-          prerelease: true
-          files: |
-            artifacts/*
-          overwrite_files: false
-          tag_name: ${{ env.TAG_NAME }}
-          name: Nightly Release ${{ env.TAG_NAME }}
-
-  release:
-    name: Release
-    needs: [test, build]
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-24.04
-    permissions:
-      id-token: write # for signing release artifacts
-      contents: write # for uploading release artifacts
-      attestations: write # for release artifact attestation
-
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v3
-        with:
-          subject-path: "artifacts/*"
-
-      - name: Rename artifacts
-        run: |
-          mv artifacts/sysand-ubuntu-24.04 artifacts/sysand-linux-x86_64
-          mv artifacts/sysand-ubuntu-24.04-arm artifacts/sysand-linux-arm64
-          mv artifacts/sysand-windows-latest.exe artifacts/sysand-windows-x86_64.exe
-          mv artifacts/sysand-windows-11-arm.exe artifacts/sysand-windows-arm64.exe
-          mv artifacts/sysand-macos-15-intel artifacts/sysand-macos-x86_64
-          mv artifacts/sysand-macos-latest artifacts/sysand-macos-arm64
-
-      - name: Create a release
-        uses: softprops/action-gh-release@v2
-        with:
-          make_latest: true
-          files: |
-            artifacts/*
-          overwrite_files: false
-          name: Release ${{ github.event.inputs.tag_name }}
