@@ -1,0 +1,21 @@
+# pre-commit is a tool to perform a predefined set of tasks manually and/or
+# automatically before git commits are made.
+#
+# Config reference: https://pre-commit.com/#pre-commit-configyaml---top-level
+#
+# Common tasks
+#
+# - Run once on all files: prek run --all-files
+# - Register git hooks:    prek install --install-hooks
+#
+repos:
+  # Autoformat: markdown, yaml, json, js
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.8.1
+    hooks:
+      - id: prettier
+        exclude: |
+          (?x)^(
+              .*stdlib_assets/.*|
+              .*\.lock
+          )$
