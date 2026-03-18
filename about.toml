@@ -1,3 +1,13 @@
+# cargo-about is a tool to generate license compliance reports for Rust
+# dependencies.
+#
+# Config reference: https://github.com/EmbarkStudios/cargo-about#configuration
+#
+# Common tasks
+#
+# - Generate a license report: cargo about generate about.hbs
+# - Check license compliance:  cargo about check
+#
 accepted = [
     "Apache-2.0 WITH LLVM-exception",
     "Apache-2.0",
