@@ -137,6 +137,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-cargo-
 
+      - name: Check dumpbin availability
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dumpbin = Resolve-Path (Join-Path $vsPath "VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe") | Select-Object -Last 1
+          $deps = & $dumpbin /?
+          echo $deps
+
       - name: cargo build ...
         run: cargo build --locked --bin sysand --release
 
@@ -144,7 +153,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $deps = & dumpbin /dependents target\release\sysand.exe
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dumpbin = Resolve-Path (Join-Path $vsPath "VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe") | Select-Object -Last 1
+          $deps = & $dumpbin /dependents target\release\sysand.exe
           echo $deps
           if ($deps -match "VCRUNTIME140.dll") {
             Write-Error "vcruntime140.dll is dynamically linked — static linking failed"
