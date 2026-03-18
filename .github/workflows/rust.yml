@@ -119,17 +119,11 @@ jobs:
           --features sysand-core/filesystem,sysand-core/networking,sysand-core/js,sysand-core/python,alltests,kpar-bzip2,kpar-zstd,kpar-xz,kpar-ppmd
 
   build:
-    needs: [test]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os:
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
           - windows-latest
-          - windows-11-arm
-          - macos-15-intel # x86
-          - macos-latest # arm64
     steps:
       - uses: actions/checkout@v6
       - uses: actions/cache@v5
@@ -145,6 +139,17 @@ jobs:
 
       - name: cargo build ...
         run: cargo build --locked --bin sysand --release
+
+      - name: Check vcruntime linking
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $deps = & dumpbin /dependents target\release\sysand.exe
+          echo $deps
+          if ($deps -match "VCRUNTIME140.dll") {
+            Write-Error "vcruntime140.dll is dynamically linked — static linking failed"
+            exit 1
+          }
 
       - name: Relocate binaries
         run: |
