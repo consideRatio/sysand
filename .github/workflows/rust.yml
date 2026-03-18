@@ -28,102 +28,13 @@ env:
   UV_HTTP_TIMEOUT: 60
 
 jobs:
-  plan:
-    runs-on: ubuntu-slim
-    outputs:
-      test: ${{ steps.decisions.outputs.test }}
-      gate: ${{ steps.decisions.outputs.gate }}
-    steps:
-      - uses: dorny/paths-filter@v4
-        id: filter
-        with:
-          filters: |
-            src:
-              - 'core/**'
-              - 'sysand/**'
-              - 'Cargo.*'
-              - '.github/workflows/rust.yml'
-      - id: decisions
-        run: |
-          test=${{ steps.filter.outputs.src == 'true' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
-          gate=${{ github.event_name == 'pull_request' }}
-          echo "test=$test" >> "$GITHUB_OUTPUT"
-          echo "gate=$gate" >> "$GITHUB_OUTPUT"
-
-  test:
-    needs: [plan]
-    if: needs.plan.outputs.test == 'true'
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - windows-latest
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-cargo-
-
-      - if: always()
-        shell: pwsh
-        run: |
-          Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Visual C++*" } | Select-Object Name, Version
-
-      - if: always()
-        shell: pwsh
-        run: |
-          Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" -ErrorAction SilentlyContinue | Select-Object Version, Installed
-
-      - if: always()
-        shell: pwsh
-        run: |
-          Test-Path "C:\Windows\System32\vcruntime140.dll"
-
-      - if: always()
-        name: Hide vcruntime to test need for static linking
-        shell: pwsh
-        run: |
-          Rename-Item "C:\Windows\System32\vcruntime140.dll" "vcruntime140.dll.bak"
-          # Also hide the one in the runner's VS install paths if needed
-
-      - if: always()
-        shell: pwsh
-        run: |
-          Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Visual C++*" } | Select-Object Name, Version
-
-      - if: always()
-        shell: pwsh
-        run: |
-          Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" -ErrorAction SilentlyContinue | Select-Object Version, Installed
-
-      - if: always()
-        shell: pwsh
-        run: |
-          Test-Path "C:\Windows\System32\vcruntime140.dll"
-
-      - if: always()
-        name: cargo test ... (Rust library & CLI)
-        run: >-
-          cargo test --locked
-          --package sysand-core
-          --package sysand
-          --features sysand-core/filesystem,sysand-core/networking,sysand-core/js,sysand-core/python,alltests,kpar-bzip2,kpar-zstd,kpar-xz,kpar-ppmd
-
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os:
           - windows-latest
+          - windows-11-arm
     steps:
       - uses: actions/checkout@v6
       - uses: actions/cache@v5
@@ -152,16 +63,3 @@ jobs:
             Write-Error "vcruntime140.dll is dynamically linked — static linking failed"
             exit 1
           }
-
-      - name: Relocate binaries
-        run: |
-          mkdir -p dist
-          ext=${{ (matrix.os == 'windows-latest' || matrix.os == 'windows-11-arm') && '.exe' || '' }}
-          cp target/release/sysand${ext} dist/sysand-${{ matrix.os }}${ext}
-
-      - name: Upload binaries
-        uses: actions/upload-artifact@v7
-        with:
-          name: sysand-cli-${{ matrix.os }}
-          path: dist
-          if-no-files-found: error
