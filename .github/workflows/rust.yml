@@ -76,10 +76,6 @@ jobs:
       - if: always()
         shell: pwsh
         run: |
-          Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Visual C++*Redistributable*" } | Select-Object Name, Version
-      - if: always()
-        shell: pwsh
-        run: |
           Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Visual C++*" } | Select-Object Name, Version
 
       - if: always()
@@ -98,6 +94,21 @@ jobs:
         run: |
           Rename-Item "C:\Windows\System32\vcruntime140.dll" "vcruntime140.dll.bak"
           # Also hide the one in the runner's VS install paths if needed
+
+      - if: always()
+        shell: pwsh
+        run: |
+          Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Visual C++*" } | Select-Object Name, Version
+
+      - if: always()
+        shell: pwsh
+        run: |
+          Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" -ErrorAction SilentlyContinue | Select-Object Version, Installed
+
+      - if: always()
+        shell: pwsh
+        run: |
+          Test-Path "C:\Windows\System32\vcruntime140.dll"
 
       - if: always()
         name: cargo test ... (Rust library & CLI)
