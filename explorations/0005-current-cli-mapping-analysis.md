@@ -113,7 +113,7 @@ sysand.project.info.maintainer.list()        # explicit
 **Proposed fix:** Two categories:
 
 - Side-effect control: `--no-lock` + `--no-sync` → `--update manifest|lock|sync`
-- Usage control: `--no-deps` → `--usage-mode all|none`
+- Usage control: `--no-deps` → `--deps all|none`
 - Validation relaxation: `--no-semver`, `--no-spdx` → `--allow-non-semver`,
   `--allow-non-spdx` (still booleans but positive framing)
 - Symbol control: `--no-index-symbols` → `--index-symbols on|off`
@@ -122,13 +122,13 @@ sysand.project.info.maintainer.list()        # explicit
 
 **Current:**
 
-| Command              | `--path` means                                    |
-| -------------------- | ------------------------------------------------- |
-| `add --path`         | Path to project being _added as a usage_       |
-| `remove --path`      | Path to project being _removed from usages_    |
-| `clone --path`       | Path to project being _cloned from_               |
-| `info --path`        | Path to project being _inspected_                 |
-| `env install --path` | Path to interchange project to install            |
+| Command              | `--path` means                              |
+| -------------------- | ------------------------------------------- |
+| `add --path`         | Path to project being _added as a usage_    |
+| `remove --path`      | Path to project being _removed from usages_ |
+| `clone --path`       | Path to project being _cloned from_         |
+| `info --path`        | Path to project being _inspected_           |
+| `env install --path` | Path to interchange project to install      |
 
 All semantically different uses of the same option name.
 
@@ -263,7 +263,7 @@ directory. This is a side-effect of the command existing.
 | `sysand sources`                       | #3 #5    | `sysand project source list`                           |
 | `sysand print-root`                    | #5       | `sysand project root`                                  |
 | `sysand env` (no subcmd)               | #10      | `sysand env create`                                    |
-| `sysand env install`                   | #3       | `sysand env install` (with `--usage-mode`)             |
+| `sysand env install`                   | #3       | `sysand env install` (with `--deps`)                   |
 | `sysand env sources <IRI>`             | #5       | `sysand env source list <IRI>`                         |
 
 ---

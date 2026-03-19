@@ -81,7 +81,7 @@ Good:  sysand usage add <IRI> --update sync
 Bad:   sysand usage add <IRI> --no-lock --no-sync
 ```
 
-Similarly: `--usage-mode all|none` instead of `--no-deps`.
+Similarly: `--deps all|none` instead of `--no-deps`.
 
 ### Rule 6: Required data as positional args, modifiers as options
 
