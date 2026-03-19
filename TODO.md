@@ -1,0 +1,3 @@
+- CLI knows current working directory, libraries don't
+- Respecting .workspace.json and sysand.toml config, how to do it in cli/library/bindings?
+- sysand.toml config may be relevant, but its project specific, so what project are we working on if we don't quickly detect it from the CWD?
