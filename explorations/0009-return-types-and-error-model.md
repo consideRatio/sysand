@@ -333,3 +333,325 @@ This needs a decision. Options:
 5. Should `locate` return `ScalarFieldResult<String>` or a bare path?
    Using the wrapper is consistent but adds ceremony for a very common
    operation.
+
+## Deep Dive: Return Type Strategies and Binding Consequences
+
+The core tension: Rust's type system is expressive (generics, default
+type parameters, zero-cost abstractions). Binding tooling (UniFFI,
+wasm-bindgen, PyO3) is not — it needs concrete types at the FFI boundary.
+Whatever we choose in Rust ripples into maintenance burden across four
+surfaces.
+
+### How many operations produce output beyond changed/warnings?
+
+Looking at the command tree:
+
+**Mutations with no meaningful output (changed + warnings is enough):**
+- `project init` — creates files, but caller already knows the path
+- `project info name set`, `description set`, `version set`, etc.
+- `project info maintainer add/remove/set/clear`
+- `project info topic add/remove/set/clear`
+- `project metadata metamodel set-standard/set-custom/clear`
+- `project metadata includes-derived set/clear`
+- `project metadata includes-implied set/clear`
+- `project source add/remove`
+- `usage add/remove`
+- `lock update`
+- `env create`
+- `env sync`
+- `env install/uninstall`
+
+**Mutations where the caller probably wants output:**
+- `project build` — output path, size, checksum of the KPAR
+- `workspace build` — output path(s), sizes, checksums of multiple KPARs
+- `project clone` — path where the project was cloned to
+
+That's roughly 25 plain mutations vs. 3 with meaningful output. The
+question is whether those 3 justify a generic parameter on the type that
+all 25 also carry.
+
+### Option A: Generic MutationResult\<T = ()\>
+
+**Rust library:**
+
+```rust
+pub struct MutationResult<T = ()> {
+    pub changed: bool,
+    pub warnings: Vec<Warning>,
+    pub output: T,
+}
+
+// Most mutations:
+fn set(ctx: &ProjectContext, name: &str) -> Result<MutationResult, SysandError>;
+
+// Build:
+fn build(ctx: &ProjectContext, opts: ProjectBuildOptions)
+    -> Result<MutationResult<BuildOutput>, SysandError>;
+```
+
+Clean in Rust. `MutationResult` (without parameter) defaults to `()`.
+The `output` field exists but is `()` — Rust optimizes it away.
+
+**UniFFI / binding generation:**
+
+UniFFI does not support generic structs. It needs concrete types at the
+boundary. This means we'd generate:
+
+```
+MutationResult          → { changed: bool, warnings: [...] }
+MutationResultBuildOutput → { changed: bool, warnings: [...], output: BuildOutput }
+```
+
+Two types. UniFFI scaffolding or manual wrapper code needed to convert.
+Every new output type means another concrete struct in the binding layer.
+
+**Java consequence:**
+
+```java
+// Users see two types:
+MutationResult result = client.usage().add(ctx, iri);
+MutationResultBuildOutput result = client.project().build(ctx, opts);
+result.output().path();  // only on the build variant
+```
+
+Or with an inheritance approach:
+```java
+// MutationResultBuildOutput extends MutationResult
+MutationResult result = client.project().build(ctx, opts);
+((MutationResultBuildOutput) result).output();  // casting needed
+```
+
+Neither is great. The two-type approach is honest but clutters the API.
+The inheritance approach is fragile.
+
+**JS/WASM consequence:**
+
+wasm-bindgen also doesn't support generics. Same two concrete types.
+TypeScript could define a union, but the runtime value is one or the other:
+
+```ts
+// Two types at runtime:
+const result: MutationResult = await sysand.usage.add(ctx, iri);
+const buildResult: BuildMutationResult = await sysand.project.build(ctx, opts);
+buildResult.output.path;
+```
+
+Or a single type with an optional field:
+```ts
+interface MutationResult {
+  changed: boolean;
+  warnings: Warning[];
+  output?: unknown;  // messy
+}
+```
+
+**Python consequence:**
+
+PyO3 can do generics via `Generic[T]` at the Python type level, but the
+underlying Rust struct still needs to be concrete at the PyO3 boundary.
+Similar to Java — two classes or one class with optional fields.
+
+**Maintenance cost:** Each new output type (if we ever add more) requires
+a new concrete binding type in every surface. For 3 operations out of 28,
+this is manageable but adds friction.
+
+### Option B: Composition — Dedicated Result Types
+
+**Rust library:**
+
+```rust
+pub struct MutationResult {
+    pub changed: bool,
+    pub warnings: Vec<Warning>,
+}
+
+pub struct BuildResult {
+    pub mutation: MutationResult,
+    pub path: Utf8PathBuf,
+    pub size_bytes: u64,
+    pub checksum: String,
+}
+
+pub struct CloneResult {
+    pub mutation: MutationResult,
+    pub path: Utf8PathBuf,
+}
+```
+
+Each operation-specific result composes `MutationResult` rather than
+parameterizing it.
+
+**Java:**
+
+```java
+MutationResult result = client.usage().add(ctx, iri);
+result.changed();
+
+BuildResult result = client.project().build(ctx, opts);
+result.mutation().changed();
+result.path();
+result.sizeBytes();
+```
+
+Clean, no generics needed. Each type is self-describing. UniFFI generates
+them directly.
+
+**JS/WASM:**
+
+```ts
+const result: MutationResult = await sysand.usage.add(ctx, iri);
+result.changed;
+
+const buildResult: BuildResult = await sysand.project.build(ctx, opts);
+buildResult.mutation.changed;
+buildResult.path;
+```
+
+Natural JavaScript objects. No optional fields, no type unions.
+
+**Python:**
+
+```python
+result = sysand.usage.add(ctx, iri)
+result.changed
+
+build_result = sysand.project.build(ctx, opts)
+build_result.mutation.changed
+build_result.path
+```
+
+**Maintenance cost:** New output types are just new structs that compose
+`MutationResult`. No generic machinery needed. But: the `mutation` field
+nesting is slightly verbose — `result.mutation.changed` vs `result.changed`.
+
+**Variant B2 — Flatten instead of nest:**
+
+```rust
+pub struct BuildResult {
+    pub changed: bool,
+    pub warnings: Vec<Warning>,
+    pub path: Utf8PathBuf,
+    pub size_bytes: u64,
+    pub checksum: String,
+}
+```
+
+Duplicates the `changed`/`warnings` fields in each result type. Simpler
+access (`result.changed`) but code duplication in the Rust lib. For 3
+types, this is fine. For 10, it would be tedious.
+
+### Option C: MutationResult with Optional Output Map
+
+**Rust library:**
+
+```rust
+pub struct MutationResult {
+    pub changed: bool,
+    pub warnings: Vec<Warning>,
+    pub output: HashMap<String, String>,
+}
+```
+
+Build sets `output["path"]`, `output["size_bytes"]`, etc. One type
+everywhere, infinitely extensible.
+
+**Binding consequence:** Easy to generate — one type in every surface.
+But: completely untyped. Callers must know the right keys, cast values.
+Defeats the purpose of a typed API. **Reject.**
+
+### Option D: One Type, Optional Typed Fields
+
+```rust
+pub struct MutationResult {
+    pub changed: bool,
+    pub warnings: Vec<Warning>,
+    pub build_output: Option<BuildOutput>,
+    pub clone_output: Option<CloneOutput>,
+}
+```
+
+One type everywhere. Most fields are `None` most of the time.
+
+**Binding consequence:** Simple to project — one struct, optional fields.
+But: the type grows with every new operation that has output. After 5
+operations, `MutationResult` has 5 optional output fields, 4 of which
+are always `None`. Semantically messy. Callers must know which field to
+check for which operation. **Reject.**
+
+### Applying the Same Analysis to Query Results
+
+`ScalarFieldResult<T>` and `ListFieldResult<T>` have the same generic
+issue. Let's check if they actually need it.
+
+**ScalarFieldResult\<T\>** — `T` varies: `String` (name, description),
+`bool` (includes-derived), version, license, URI, etc. There are ~15
+different `T` values across project info/metadata fields.
+
+Unlike `MutationResult` where only 3 out of 28 need output, *every*
+scalar query needs a different `T`. Generating 15 concrete types
+(`ScalarFieldResultString`, `ScalarFieldResultBool`, ...) is unworkable.
+
+This means the binding layer *must* handle generics for query results
+somehow. Options:
+
+1. UniFFI can handle a small set of primitive types as generic params
+   (`String`, `bool`, `u64`). Most scalar queries return these.
+2. Use `serde_json::Value` or equivalent at the boundary — typed in
+   Rust, dynamic in bindings. Loses type safety.
+3. Return bare values from queries (no wrapper) — the simplest option
+   but breaks the "every operation returns a result object" rule.
+
+UniFFI actually *does* support generic-like patterns for a small set of
+types through proc-macro expansion. The practical approach: define the
+Rust API with generics, and let the binding generator create concrete
+types for each instantiation it encounters. This is what UniFFI does —
+it monomorphizes at the boundary.
+
+So the binding tooling will already handle `ScalarFieldResult<String>`,
+`ScalarFieldResult<bool>`, etc. The question is whether we also want it
+to handle `MutationResult<BuildOutput>`, `MutationResult<CloneOutput>`,
+etc.
+
+### Summary Table
+
+| Approach | Rust ergonomics | Binding complexity | Type safety | Maintenance |
+| -------- | --------------- | ------------------ | ----------- | ----------- |
+| A: Generic MutationResult\<T\> | Excellent | Medium — 3 concrete types generated | Full | Low in Rust, medium in bindings |
+| B: Composition | Good (nesting) | Low — each type is concrete | Full | Low everywhere |
+| B2: Flattened | Good (flat) | Low — each type is concrete | Full | Medium (field duplication) |
+| C: Output map | OK | Low — one type | None | Low but fragile |
+| D: Optional fields | Poor | Low — one type | Partial | Grows badly |
+
+### Tentative Assessment
+
+Since the binding layer already handles monomorphized generics for query
+results (`ScalarFieldResult<String>`, etc.), adding 2–3 more
+monomorphizations for `MutationResult<BuildOutput>` is marginal extra
+cost. The machinery already exists.
+
+But composition (Option B) has a pragmatic advantage: each result type
+is self-documenting and has named fields specific to the operation
+(`path`, `size_bytes`) rather than a generic `output` that you have to
+unwrap. In bindings, `BuildResult` with a `path` field is clearer than
+`MutationResultBuildOutput` with an `output` field that has a `path`.
+
+The nesting cost (`result.mutation.changed`) is real but small. And
+Rust can provide convenience accessors:
+
+```rust
+impl BuildResult {
+    pub fn changed(&self) -> bool { self.mutation.changed }
+    pub fn warnings(&self) -> &[Warning] { &self.mutation.warnings }
+}
+```
+
+Bindings can do the same. The nesting is an implementation detail that
+surfaces can flatten via methods.
+
+**Leaning toward Option B (composition) with convenience accessors**
+because:
+- Self-documenting types in every surface
+- No generic machinery needed for mutations
+- Binding tooling does the least work
+- Named fields > generic `output`
+- Convenience accessors hide the nesting
