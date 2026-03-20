@@ -30,10 +30,10 @@ and Python module path.
 
 Read `adr/` for the full decisions. Summary:
 
-- **ADR-0001**: Discovery (walking up to find `.project.json`) is CLI-only.
-  The library takes explicit paths via `ProjectContext` and `WorkspaceContext`.
-  Config (`sysand.toml`) is project-level only, loaded automatically,
-  overridable via `ConfigMode` (`--config auto|none|<PATH>`).
+- **ADR-0001**: The library takes explicit paths via `ProjectContext` and
+  `WorkspaceContext`. Config (`sysand.toml`) is project-level only, loaded
+  automatically, overridable via `ConfigMode` (`--config auto|none|<PATH>`).
+  Implicit discovery from CWD is CLI-only (see ADR-0006 for `locate`).
 
 - **ADR-0002**: CLI follows noun-verb grammar:
   `sysand <namespace> [<resource>...] <verb> [OPERANDS] [OPTIONS]`.
@@ -50,6 +50,11 @@ Read `adr/` for the full decisions. Summary:
 - **ADR-0005**: Projection rules for all surfaces. Context objects
   (`ProjectContext`) are explicit everywhere. Every operation returns a typed
   result object (no unwrapping). Errors use a shared `ErrorCode` enum.
+
+- **ADR-0006**: `project::locate` and `workspace::locate` are library
+  operations that walk up from a path to find the project or workspace root.
+  Returns a path, not a context — the caller constructs their own context.
+  Implicit locate from CWD remains CLI-only.
 
 ## Terminology
 

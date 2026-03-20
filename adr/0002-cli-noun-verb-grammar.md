@@ -27,9 +27,10 @@ sysand [GLOBAL_OPTIONS] <namespace> [<resource>...] <verb> [OPERANDS...] [OPTION
 ```
 
 - `<namespace>` and `<resource>` tokens are **nouns** (`project`, `info`,
-  `source`, `env`, `usage`)
+  `source`, `env`, `usage`, `workspace`)
 - The **final token** in the command path is always the **verb** (`get`, `set`,
-  `add`, `remove`, `list`, `show`, `clear`, `update`, `sync`, `create`, `init`)
+  `add`, `remove`, `list`, `show`, `clear`, `update`, `sync`, `create`, `init`,
+  `build`, `locate`)
 - Required data is **positional operands**
 - Optional behavior is **named options**
 

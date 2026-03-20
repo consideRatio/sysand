@@ -20,16 +20,16 @@ We need to decide where discovery and config loading responsibilities live.
 
 ## Decision
 
-### 1. Discovery is CLI-only
+### 1. Discovery is CLI-only *(superseded by ADR-0006)*
 
-Path traversal (walking up the directory tree to find `.project.json` or
-`.workspace.json`) is a CLI convenience. The library does not perform discovery.
+~~Path traversal (walking up the directory tree to find `.project.json` or
+`.workspace.json`) is a CLI convenience. The library does not perform
+discovery.~~
 
-- **CLI**: discovers project/workspace from CWD, then passes concrete paths
-  to the library
-- **Library**: takes an explicit project path or workspace path, never
-  traverses upward
-- **Bindings**: callers provide paths explicitly, same as the library
+See ADR-0006: the library now provides `project::locate` and
+`workspace::locate` as explicit operations. No library operation calls
+locate implicitly — the caller decides when traversal happens. Implicit
+locate from CWD remains CLI-only.
 
 ### 2. Config is project-level only
 
@@ -171,9 +171,8 @@ Given a workspace path:
 
 ## What Stays CLI-Only
 
-- Walking up from CWD to find `.project.json`
-- Walking up to find `.workspace.json`
-- Applying `--project` / `--workspace` defaults from CWD
+- Implicit locate from CWD when `--project` / `--workspace` is omitted
+  (the locate operation itself is in the library — see ADR-0006)
 - Terminal concerns: color, prompting, log level, output format
 
 ## Consequences

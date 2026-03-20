@@ -49,7 +49,7 @@ sysand
       [--allow-non-spdx]
 
     show [--project <PATH>]
-    root [--project <PATH>]
+    locate [--project <PATH>]
 
     clone <LOCATOR>
       [--target <PATH>]
@@ -173,6 +173,7 @@ sysand
         [--include-std]
 
   workspace
+    locate [--workspace <PATH>]
     build
       [--workspace <PATH>]
       [--target <PATH>]
@@ -244,7 +245,7 @@ workspace context.
 | `add`/`remove` → `usage add`/`remove`                                     | Domain term; namespace grouping         | 0002 |
 | `include`/`exclude` → `project source add`/`remove`                       | Namespace grouping                      | 0002 |
 | `sources` → `project source list`                                         | Namespace grouping                      | 0002 |
-| `print-root` → `project root`                                             | Namespace grouping                      | 0002 |
+| `print-root` → `project locate`                                           | Namespace grouping; proper verb          | 0002, 0006 |
 | `sync` → `env sync`                                                       | Belongs under env                       | 0002 |
 | `info` → `project show` + `project info` + `project metadata` + `resolve` | Split local/remote; split info/metadata | 0002 |
 | `info name --set` → `project info name set`                               | Verbs as subcommands                    | 0002 |
