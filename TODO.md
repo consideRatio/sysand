@@ -1,3 +1,4 @@
-- Formalize return types and error model (ScalarFieldResult, MutationResult, SysandError, ErrorCode)
+- Formalize return types and error model — natural return types direction explored (0009), needs ADR update to drop wrapper taxonomy from ADR-0005
+- Explore resolve command design: single vs multiple version returns, query shapes, how version constraints affect the API (split from exploration 0009)
 - Scaffold Rust workspace: crate structure, module layout mirroring command tree
 - Define JS/WASM projection rules in detail (async/Promise semantics, wasm-bindgen constraints)
