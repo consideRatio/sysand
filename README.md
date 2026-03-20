@@ -45,7 +45,7 @@ Read `adr/` for the full decisions. Summary:
   become shared types (`ResolveOptions`).
 
 - **ADR-0004**: Complete command tree with 6 namespaces: `project`, `usage`,
-  `lock`, `env`, `build`, `resolve`. Every command has one return shape.
+  `lock`, `env`, `workspace`, `resolve`. Every command has one return shape.
 
 - **ADR-0005**: Projection rules for all surfaces. Context objects
   (`ProjectContext`) are explicit everywhere. Every operation returns a typed
@@ -63,11 +63,11 @@ Read `adr/` for the full decisions. Summary:
 ## CLI Command Namespaces
 
 ```
-sysand project ...    Local project lifecycle, sources, info, metadata
+sysand project ...    Local project lifecycle, sources, info, metadata, building
 sysand usage ...      Usage management (add/remove/list)
 sysand lock ...       Lockfile operations
 sysand env ...        Environment creation, sync, install/uninstall
-sysand build ...      KPAR archive building
+sysand workspace ...  Workspace operations
 sysand resolve ...    Remote package queries (read-only)
 ```
 

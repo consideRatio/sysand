@@ -36,11 +36,11 @@ sysand [GLOBAL_OPTIONS] <namespace> [<resource>...] <verb> [OPERANDS...] [OPTION
 ### Namespaces group related operations
 
 ```
-sysand project ...       project lifecycle and metadata
+sysand project ...       project lifecycle, metadata, and building
 sysand usage ...         usage management (add/remove/list)
 sysand lock ...          lockfile operations
 sysand env ...           environment management
-sysand build ...         archive building
+sysand workspace ...     workspace operations
 sysand resolve ...       remote package queries (read-only)
 ```
 
@@ -70,8 +70,8 @@ Bad:   sysand project info name --set "foo"
 Good:  sysand project info maintainer add "Alice"
 Bad:   sysand project info maintainer --add "Alice"
 
-Good:  sysand build project
-       sysand build workspace
+Good:  sysand project build
+       sysand workspace build
 Bad:   sysand build --workspace
 ```
 

@@ -26,14 +26,14 @@ This ADR defines the complete reworked command tree.
 
 ### Namespaces
 
-| Namespace | Purpose                                                        |
-| --------- | -------------------------------------------------------------- |
-| `project` | Local project lifecycle, sources, info fields, metadata fields |
-| `usage`   | Usage management (add/remove/list)                             |
-| `lock`    | Lockfile operations                                            |
-| `env`     | Environment creation, sync, install/uninstall, listing         |
-| `build`   | KPAR archive building                                          |
-| `resolve` | Remote package queries (read-only, no config)                  |
+| Namespace   | Purpose                                                        |
+| ----------- | -------------------------------------------------------------- |
+| `project`   | Local project lifecycle, sources, info fields, metadata fields |
+| `usage`     | Usage management (add/remove/list)                             |
+| `lock`      | Lockfile operations                                            |
+| `env`       | Environment creation, sync, install/uninstall, listing         |
+| `workspace` | Workspace operations                                           |
+| `resolve`   | Remote package queries (read-only, no config)                  |
 
 ### Command Tree
 
@@ -129,6 +129,11 @@ sysand
         set <true|false> [--project <PATH>]
         clear [--project <PATH>]
 
+    build
+      [--project <PATH>]
+      [--target <PATH>]
+      [--compression stored|deflated|bzip2|zstd|xz|ppmd]
+
   usage
     add <IRI> [<VERSION_REQ>]
       [--project <PATH>]
@@ -167,12 +172,8 @@ sysand
         [--deps all|none]
         [--include-std]
 
-  build
-    project
-      [--project <PATH>]
-      [--target <PATH>]
-      [--compression stored|deflated|bzip2|zstd|xz|ppmd]
-    workspace
+  workspace
+    build
       [--workspace <PATH>]
       [--target <PATH>]
       [--compression stored|deflated|bzip2|zstd|xz|ppmd]
@@ -231,8 +232,9 @@ convention.
 **Build compression:** `stored` and `deflated` available by default. `bzip2`,
 `zstd`, `xz`, `ppmd` behind feature flags. Default is `deflated`.
 
-**Build mode explicit:** `build project` and `build workspace` are separate
-subcommands. No auto-detection of project vs workspace context.
+**Build mode explicit:** `project build` and `workspace build` are separate
+commands under their respective namespaces. No auto-detection of project vs
+workspace context.
 
 ## What Changed from Current CLI
 
@@ -246,7 +248,7 @@ subcommands. No auto-detection of project vs workspace context.
 | `sync` → `env sync`                                                       | Belongs under env                       | 0002 |
 | `info` → `project show` + `project info` + `project metadata` + `resolve` | Split local/remote; split info/metadata | 0002 |
 | `info name --set` → `project info name set`                               | Verbs as subcommands                    | 0002 |
-| `build` auto-detect → `build project` / `build workspace`                 | Explicit subcommands                    | 0002 |
+| `build` auto-detect → `project build` / `workspace build`                 | Noun-verb grammar; explicit subcommands | 0002 |
 | `env` (no subcmd) → `env create`                                          | Explicit verb                           | 0002 |
 | `--no-lock`/`--no-sync` → `--update manifest\|lock\|sync`                 | Positive enum                           | 0003 |
 | `--no-deps` → `--deps all\|none`                                          | Positive enum                           | 0003 |

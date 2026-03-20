@@ -97,7 +97,7 @@ non-breaking.
 Workspace operations take `&WorkspaceContext` as their first argument:
 
 ```rust
-build::workspace(workspace: &WorkspaceContext, options: BuildWorkspaceOptions)?;
+workspace::build(workspace: &WorkspaceContext, options: WorkspaceBuildOptions)?;
 ```
 
 ## CLI Mapping
