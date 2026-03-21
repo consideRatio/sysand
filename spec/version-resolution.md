@@ -66,6 +66,29 @@ queries — it explores the full version space to find compatible
 combinations across the dependency graph. This is private internal
 machinery (`pub(crate)`), not part of the public API.
 
+### What the Solver Reads
+
+Every candidate version the solver considers requires two files:
+
+- **`.project.json`** — provides the version (for constraint matching)
+  and usages (for transitive dependency discovery). This is essential
+  for resolution.
+- **`.meta.json`** — provides the symbol index (exported names),
+  checksums, created date, and metamodel info. This is needed for the
+  lockfile output, not for resolution itself, but is read alongside
+  `.project.json` from every candidate.
+
+The solver may evaluate many versions of many packages during
+backtracking. Each evaluation reads both files. This has implications
+for index protocol design — an index that can serve both files
+efficiently (or a combined summary) reduces resolution cost.
+
+The lockfile records data from both files: name, version, and usages
+from `.project.json`; symbol exports, checksums, and sources from
+`.meta.json`.
+
+### Public vs Internal Boundary
+
 The public `lookup` namespace and the internal solver share index
 access code but have different API shapes. The solver may be exposed
 as a lower-level API in the future if demand emerges.
