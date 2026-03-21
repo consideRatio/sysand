@@ -20,8 +20,9 @@ See `README.md` for project overview, architecture, and design decisions.
 ## Directory Structure
 
 ```
-adr/            Architectural Decision Records (numbered, commitments)
-explorations/   Working exploration documents (numbered, cheap)
+spec/           Living specification — the current state of all decisions
+adr/            Architectural Decision Records (numbered, immutable)
+explorations/   Working exploration documents (numbered, immutable once done)
 reference/      Reference implementation (existing codebase, read-only)
 TODO.md         Open work items only
 CHANGELOG.md    Decisions made and their dates
@@ -29,14 +30,34 @@ CHANGELOG.md    Decisions made and their dates
 
 ## Working Style
 
-We use an explore-and-distill workflow:
+We use an explore → decide → specify workflow:
 
-1. Explore topics broadly, capture in `explorations/NNNN-*.md`
-2. Iterate, resolve open questions one at a time
-3. Distill into `adr/NNNN-*.md` when decisions crystallize
+1. **Explore** — investigate topics broadly in `explorations/NNNN-*.md`
+2. **Decide** — when a decision crystallizes, record it in `adr/NNNN-*.md`
+3. **Specify** — update the relevant `spec/` file(s) to reflect the
+   cumulative current state
 
 Ask clarifying questions rather than assuming. Deliberate on naming.
 One question at a time, not a list of 10.
+
+### Three layers, three purposes
+
+**`spec/`** is the living specification. It reflects the current state
+of all cumulative decisions. When you want to know "what is the command
+tree right now?", you read `spec/command-tree.md`. When a new decision
+is made, the relevant spec file is updated. Spec files are the single
+source of truth for the current design.
+
+**`adr/`** records are immutable. Each ADR captures a decision, its
+context, and its reasoning at a specific point in time. ADRs are never
+edited after acceptance — they are historical artifacts. If a later
+decision supersedes an earlier one, the later ADR notes what it
+supersedes, but the earlier ADR is not modified. The spec files reflect
+the cumulative effect.
+
+**`explorations/`** are immutable once they reach a terminal status.
+They capture working-out and analysis that led to decisions. They may
+contain ideas that were rejected — that's valuable context.
 
 ### Exploration lifecycle
 
@@ -53,12 +74,6 @@ When exploring a design, write concrete end-to-end usage scenarios
 across all binding surfaces (Rust, Java, JS/WASM, Python) *before*
 proposing abstractions. Scenarios catch problems that abstract
 reasoning misses.
-
-### ADR amendments
-
-When an ADR is amended by a later ADR, add a dated entry to the
-amendment log at the bottom of the amended ADR. This makes evolution
-traceable without digging through git history.
 
 ### TODO and CHANGELOG
 

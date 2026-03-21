@@ -112,7 +112,8 @@ wrapper types.
 ## Directory Structure
 
 ```
-adr/            Architectural Decision Records (numbered)
+spec/           Living specification — current state of all decisions
+adr/            Architectural Decision Records (numbered, immutable)
 explorations/   Working exploration documents (numbered, with status)
 reference/      Reference implementation (existing codebase, read-only)
 TODO.md         Open work items
