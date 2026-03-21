@@ -10,8 +10,8 @@ explorations and discussions. This document pins them down.
 ## Package Identity
 
 - **IRI** — Internationalized Resource Identifier. The unique identity
-  of a package. Example: `urn:kpar:sensors`. An IRI says *what* a
-  package is, not *where* it is. A project can have multiple IRIs
+  of a package. Example: `urn:kpar:sensors`. An IRI says _what_ a
+  package is, not _where_ it is. A project can have multiple IRIs
   (aliases). Defined in `.project.json` as `identifiers`.
 
 - **Name** — Human-readable label for a package. Example: `"sensors"`.
@@ -78,7 +78,7 @@ explorations and discussions. This document pins them down.
   usages and resolves a compatible set of versions across the entire
   dependency graph. Not part of the public API.
 
-- **Lookup options** — Shared option group: `--index`, 
+- **Lookup options** — Shared option group: `--index`,
   `--default-index`, `--index-mode`, `--include-std`. Controls which
   indexes are queried.
 

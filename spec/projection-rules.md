@@ -27,35 +27,35 @@ designed wrong.
 `ProjectContext` and `WorkspaceContext` are explicit types in every
 surface, passed as the first argument.
 
-| Surface | Project | Workspace |
-| ------- | ------- | --------- |
-| Rust | `&ProjectContext` | `&WorkspaceContext` |
-| Java | `ProjectContext ctx` | `WorkspaceContext ctx` |
+| Surface | Project               | Workspace               |
+| ------- | --------------------- | ----------------------- |
+| Rust    | `&ProjectContext`     | `&WorkspaceContext`     |
+| Java    | `ProjectContext ctx`  | `WorkspaceContext ctx`  |
 | JS/WASM | `ctx: ProjectContext` | `ctx: WorkspaceContext` |
-| Python | `ctx: ProjectContext` | `ctx: WorkspaceContext` |
+| Python  | `ctx: ProjectContext` | `ctx: WorkspaceContext` |
 
 ## Arguments → Parameters
 
-| CLI element | Rust | Java | JS/WASM | Python |
-| --- | --- | --- | --- | --- |
-| Required positional `<IRI>` | `iri: &str` | `String iri` | `iri: string` | `iri: str` |
-| Optional positional `[<VERSION>]` | `Option<&str>` | `@Nullable String` | `version?: string` | `version: str \| None = None` |
-| Named option `--project <PATH>` | field in options struct | field in options builder | field in options object | keyword-only arg |
-| Repeated option `--index <URL>` | `Vec<Url>` | `List<String>` | `string[]` | `Sequence[str]` |
-| Enum option `--update <MODE>` | `UpdateMode` enum | `UpdateMode` enum | `"manifest" \| "lock" \| "sync"` | `UpdateMode` enum |
-| Boolean flag `--allow-overwrite` | `bool` field | `.allowOverwrite(true)` | `allowOverwrite?: boolean` | `allow_overwrite: bool = False` |
+| CLI element                       | Rust                    | Java                     | JS/WASM                          | Python                          |
+| --------------------------------- | ----------------------- | ------------------------ | -------------------------------- | ------------------------------- |
+| Required positional `<IRI>`       | `iri: &str`             | `String iri`             | `iri: string`                    | `iri: str`                      |
+| Optional positional `[<VERSION>]` | `Option<&str>`          | `@Nullable String`       | `version?: string`               | `version: str \| None = None`   |
+| Named option `--project <PATH>`   | field in options struct | field in options builder | field in options object          | keyword-only arg                |
+| Repeated option `--index <URL>`   | `Vec<Url>`              | `List<String>`           | `string[]`                       | `Sequence[str]`                 |
+| Enum option `--update <MODE>`     | `UpdateMode` enum       | `UpdateMode` enum        | `"manifest" \| "lock" \| "sync"` | `UpdateMode` enum               |
+| Boolean flag `--allow-overwrite`  | `bool` field            | `.allowOverwrite(true)`  | `allowOverwrite?: boolean`       | `allow_overwrite: bool = False` |
 
 ## Options Grouping
 
 Related CLI options that appear together across multiple commands become
 a shared type:
 
-| Surface | Shape |
-| ------- | ----- |
-| Rust | `LookupOptions` struct |
-| Java | `LookupOptions` builder |
+| Surface | Shape                            |
+| ------- | -------------------------------- |
+| Rust    | `LookupOptions` struct           |
+| Java    | `LookupOptions` builder          |
 | JS/WASM | `LookupOptions` object/interface |
-| Python | `LookupOptions` dataclass |
+| Python  | `LookupOptions` dataclass        |
 
 Paired flags (`--source-kind` + `--source`) become a single `SourceSpec`
 type.
@@ -74,31 +74,31 @@ No universal wrapper types.
 
 ## Errors
 
-| Surface | Shape |
-| ------- | ----- |
-| Rust | `Result<T, SysandError>` with `ErrorCode` enum |
-| Java | throws `SysandException` with `ErrorCode` field |
-| JS/WASM | throws `SysandError` with `code` property |
-| Python | raises `SysandError` subclass per code |
+| Surface | Shape                                           |
+| ------- | ----------------------------------------------- |
+| Rust    | `Result<T, SysandError>` with `ErrorCode` enum  |
+| Java    | throws `SysandException` with `ErrorCode` field |
+| JS/WASM | throws `SysandError` with `code` property       |
+| Python  | raises `SysandError` subclass per code          |
 
 Error codes are the same enum everywhere. No per-command exception
 classes.
 
 ## Naming Conventions
 
-| Concept | Rust | Java | JS/WASM | Python |
-| --- | --- | --- | --- | --- |
-| Modules/namespaces | `snake_case` | `camelCase()` accessors | `camelCase` | `snake_case` |
-| Functions/methods | `snake_case` | `camelCase` | `camelCase` | `snake_case` |
-| Types | `PascalCase` | `PascalCase` | `PascalCase` | `PascalCase` |
-| Enum variants | `PascalCase` | `UPPER_SNAKE` | `"kebab-case"` string union | `UPPER_SNAKE` |
-| Options struct | `XxxOptions` | `XxxOptions` builder | `XxxOptions` interface | `XxxOptions` dataclass |
+| Concept            | Rust         | Java                    | JS/WASM                     | Python                 |
+| ------------------ | ------------ | ----------------------- | --------------------------- | ---------------------- |
+| Modules/namespaces | `snake_case` | `camelCase()` accessors | `camelCase`                 | `snake_case`           |
+| Functions/methods  | `snake_case` | `camelCase`             | `camelCase`                 | `snake_case`           |
+| Types              | `PascalCase` | `PascalCase`            | `PascalCase`                | `PascalCase`           |
+| Enum variants      | `PascalCase` | `UPPER_SNAKE`           | `"kebab-case"` string union | `UPPER_SNAKE`          |
+| Options struct     | `XxxOptions` | `XxxOptions` builder    | `XxxOptions` interface      | `XxxOptions` dataclass |
 
 ## Async
 
-| Surface | Rule |
-| ------- | ---- |
-| Rust | async for network ops, sync for local. `blocking` module wraps async for sync callers |
-| Java | sync by default; binding layer manages async runtime internally |
-| JS/WASM | everything returns `Promise` |
-| Python | sync by default; binding layer manages async runtime internally |
+| Surface | Rule                                                                                  |
+| ------- | ------------------------------------------------------------------------------------- |
+| Rust    | async for network ops, sync for local. `blocking` module wraps async for sync callers |
+| Java    | sync by default; binding layer manages async runtime internally                       |
+| JS/WASM | everything returns `Promise`                                                          |
+| Python  | sync by default; binding layer manages async runtime internally                       |

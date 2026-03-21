@@ -196,24 +196,24 @@ Where `[lookup options]` expands to:
 
 ## What Changed from Current CLI
 
-| Change                                                                    | Reason                                  | ADR      |
-| ------------------------------------------------------------------------- | --------------------------------------- | -------- |
-| `init` → `project init`                                                   | Namespace grouping                      | ADR-0002 |
-| `add`/`remove` → `usage add`/`usage remove`                               | Domain term; namespace grouping         | ADR-0002 |
-| `include`/`exclude` → `project source add`/`remove`                       | Namespace grouping                      | ADR-0002 |
-| `sources` → `project source list`                                         | Namespace grouping                      | ADR-0002 |
-| `print-root` → `project root`                                             | Namespace grouping                      | ADR-0002 |
-| `sync` → `env sync`                                                       | Belongs under env                       | ADR-0002 |
+| Change                                                                   | Reason                                  | ADR      |
+| ------------------------------------------------------------------------ | --------------------------------------- | -------- |
+| `init` → `project init`                                                  | Namespace grouping                      | ADR-0002 |
+| `add`/`remove` → `usage add`/`usage remove`                              | Domain term; namespace grouping         | ADR-0002 |
+| `include`/`exclude` → `project source add`/`remove`                      | Namespace grouping                      | ADR-0002 |
+| `sources` → `project source list`                                        | Namespace grouping                      | ADR-0002 |
+| `print-root` → `project root`                                            | Namespace grouping                      | ADR-0002 |
+| `sync` → `env sync`                                                      | Belongs under env                       | ADR-0002 |
 | `info` → `project show` + `project info` + `project metadata` + `lookup` | Split local/remote; split info/metadata | ADR-0002 |
-| `info name --set` → `project info name set`                               | Verbs as subcommands                    | ADR-0002 |
-| `build` auto-detect → `build project` / `build workspace`                 | Explicit subcommands                    | ADR-0002 |
-| `env` (no subcmd) → `env create`                                          | Explicit verb                           | ADR-0002 |
-| `--no-lock`/`--no-sync` → `--update manifest\|lock\|sync`                 | Positive enum                           | ADR-0003 |
-| `--no-deps` → `--deps all\|none`                                          | Positive enum                           | ADR-0003 |
-| `--no-semver` → `--allow-non-semver`                                      | Positive framing                        | ADR-0003 |
-| `--no-index-symbols` → `--index-symbols on\|off`                          | Positive enum                           | ADR-0003 |
-| `--path` (5 meanings) → `--project`/`--env`/`--target`                    | Stable names                            | ADR-0003 |
-| `--no-config` → `--config none`                                           | Positive enum                           | ADR-0001 |
+| `info name --set` → `project info name set`                              | Verbs as subcommands                    | ADR-0002 |
+| `build` auto-detect → `build project` / `build workspace`                | Explicit subcommands                    | ADR-0002 |
+| `env` (no subcmd) → `env create`                                         | Explicit verb                           | ADR-0002 |
+| `--no-lock`/`--no-sync` → `--update manifest\|lock\|sync`                | Positive enum                           | ADR-0003 |
+| `--no-deps` → `--deps all\|none`                                         | Positive enum                           | ADR-0003 |
+| `--no-semver` → `--allow-non-semver`                                     | Positive framing                        | ADR-0003 |
+| `--no-index-symbols` → `--index-symbols on\|off`                         | Positive enum                           | ADR-0003 |
+| `--path` (5 meanings) → `--project`/`--env`/`--target`                   | Stable names                            | ADR-0003 |
+| `--no-config` → `--config none`                                          | Positive enum                           | ADR-0001 |
 
 ## Open Questions
 

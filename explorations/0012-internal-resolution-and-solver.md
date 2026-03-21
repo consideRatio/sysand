@@ -66,13 +66,13 @@ The solver needs multi-version queries internally. The public API
 exposes single-version queries. These are fundamentally different
 operations:
 
-| | Public lookup | Internal solver |
-| --- | --- | --- |
-| Input | IRI + optional constraint | IRI (all versions) |
-| Output | One package's info | All candidates with full info |
-| Purpose | User inspects a package | Solver explores version space |
-| Caching | Not needed | Essential for performance |
-| Transitive | No | Yes — reads usages recursively |
+|            | Public lookup             | Internal solver                |
+| ---------- | ------------------------- | ------------------------------ |
+| Input      | IRI + optional constraint | IRI (all versions)             |
+| Output     | One package's info        | All candidates with full info  |
+| Purpose    | User inspects a package   | Solver explores version space  |
+| Caching    | Not needed                | Essential for performance      |
+| Transitive | No                        | Yes — reads usages recursively |
 
 ## How This Should Be Structured
 

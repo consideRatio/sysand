@@ -17,12 +17,12 @@ the error. Optional because some errors are context-free.
 
 ## Binding Projections
 
-| Surface | Shape |
-| ------- | ----- |
-| Rust | `Result<T, SysandError>` with `ErrorCode` enum |
-| Java | throws `SysandException` with `ErrorCode` field |
-| JS/WASM | throws `SysandError` with `code` property (`"kebab-case"` string) |
-| Python | raises `SysandError` subclass per code (`ProjectNotFoundError`, etc.) |
+| Surface | Shape                                                                 |
+| ------- | --------------------------------------------------------------------- |
+| Rust    | `Result<T, SysandError>` with `ErrorCode` enum                        |
+| Java    | throws `SysandException` with `ErrorCode` field                       |
+| JS/WASM | throws `SysandError` with `code` property (`"kebab-case"` string)     |
+| Python  | raises `SysandError` subclass per code (`ProjectNotFoundError`, etc.) |
 
 Error codes are the same enum everywhere. No per-command exception
 classes.

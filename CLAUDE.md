@@ -71,7 +71,7 @@ Every exploration has a status line at the top (after the title):
 ### Scenarios first
 
 When exploring a design, write concrete end-to-end usage scenarios
-across all binding surfaces (Rust, Java, JS/WASM, Python) *before*
+across all binding surfaces (Rust, Java, JS/WASM, Python) _before_
 proposing abstractions. Scenarios catch problems that abstract
 reasoning misses.
 

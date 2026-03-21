@@ -41,23 +41,23 @@ string. No flags.
 
 Lookup return types mirror local commands:
 
-| Command | Returns |
-| ------- | ------- |
-| `lookup show` | `PackageSnapshot` |
-| `lookup info name get` | `String` |
-| `lookup info version get` | `String` |
-| `lookup info description get` | `Option<String>` |
-| `lookup info license get` | `Option<String>` |
-| `lookup info website get` | `Option<String>` |
-| `lookup info maintainer list` | `Vec<String>` |
-| `lookup info topic list` | `Vec<String>` |
-| `lookup info usage list` | `Vec<UsageEntry>` |
-| `lookup metadata created get` | `Option<DateTime>` |
-| `lookup metadata index list` | `Vec<IndexEntry>` |
-| `lookup metadata checksum list` | `Vec<ChecksumEntry>` |
-| `lookup metadata metamodel get` | `Option<Metamodel>` |
-| `lookup metadata includes-derived get` | `Option<bool>` |
-| `lookup metadata includes-implied get` | `Option<bool>` |
+| Command                                | Returns              |
+| -------------------------------------- | -------------------- |
+| `lookup show`                          | `PackageSnapshot`    |
+| `lookup info name get`                 | `String`             |
+| `lookup info version get`              | `String`             |
+| `lookup info description get`          | `Option<String>`     |
+| `lookup info license get`              | `Option<String>`     |
+| `lookup info website get`              | `Option<String>`     |
+| `lookup info maintainer list`          | `Vec<String>`        |
+| `lookup info topic list`               | `Vec<String>`        |
+| `lookup info usage list`               | `Vec<UsageEntry>`    |
+| `lookup metadata created get`          | `Option<DateTime>`   |
+| `lookup metadata index list`           | `Vec<IndexEntry>`    |
+| `lookup metadata checksum list`        | `Vec<ChecksumEntry>` |
+| `lookup metadata metamodel get`        | `Option<Metamodel>`  |
+| `lookup metadata includes-derived get` | `Option<bool>`       |
+| `lookup metadata includes-implied get` | `Option<bool>`       |
 
 ## Internal Resolution
 

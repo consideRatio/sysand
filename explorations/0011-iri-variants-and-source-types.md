@@ -17,16 +17,16 @@ proposes how they should surface in the reworked design.
 
 From the `Source` enum in `core/src/lock.rs`:
 
-| Variant | Resolves from | Data |
-| ------- | ------------- | ---- |
-| `Editable` | Local path (relative to workspace) | Unix path |
-| `LocalSrc` | Local path to source directory | Unix path |
-| `LocalKpar` | Local path to .kpar archive | Unix path |
-| `Registry` | Package index lookup by IRI | Registry URL |
-| `RemoteKpar` | URL to .kpar archive | URL + optional size |
-| `RemoteSrc` | URL to remote source | URL |
-| `RemoteGit` | URL to git repo | URL |
-| `RemoteApi` | API endpoint | URL |
+| Variant      | Resolves from                      | Data                |
+| ------------ | ---------------------------------- | ------------------- |
+| `Editable`   | Local path (relative to workspace) | Unix path           |
+| `LocalSrc`   | Local path to source directory     | Unix path           |
+| `LocalKpar`  | Local path to .kpar archive        | Unix path           |
+| `Registry`   | Package index lookup by IRI        | Registry URL        |
+| `RemoteKpar` | URL to .kpar archive               | URL + optional size |
+| `RemoteSrc`  | URL to remote source               | URL                 |
+| `RemoteGit`  | URL to git repo                    | URL                 |
+| `RemoteApi`  | API endpoint                       | URL                 |
 
 These fall into three categories by how you locate the package:
 
@@ -39,6 +39,7 @@ package manager flow.
 ### 2. Direct reference (URL-based)
 
 You have a URL pointing directly at the package:
+
 - `https://example.com/sensors-2.0.kpar` → remote KPAR
 - `https://example.com/sensors/` → remote source
 - `https://github.com/example/sensors.git` → git repo
@@ -49,6 +50,7 @@ No index involved. You know where the package is.
 ### 3. Local reference (path-based)
 
 You have a path on disk:
+
 - `./libs/sensors/` → local source directory
 - `./archives/sensors-2.0.kpar` → local KPAR archive
 - `./libs/sensors/` (editable) → like local source, but changes are
@@ -56,14 +58,14 @@ You have a path on disk:
 
 ## Which Commands Need Which Source Types?
 
-| Command | Index | Direct URL | Local path |
-| ------- | ----- | ---------- | ---------- |
-| `lookup show` | Yes | ? | No |
-| `lookup info *` | Yes | ? | No |
-| `usage add` | Yes | Yes | Yes |
-| `project clone` | Yes | Yes | Yes |
-| `env install` | Yes | Yes | Yes |
-| `env sync` | Yes | Yes | Yes (from lock) |
+| Command         | Index | Direct URL | Local path      |
+| --------------- | ----- | ---------- | --------------- |
+| `lookup show`   | Yes   | ?          | No              |
+| `lookup info *` | Yes   | ?          | No              |
+| `usage add`     | Yes   | Yes        | Yes             |
+| `project clone` | Yes   | Yes        | Yes             |
+| `env install`   | Yes   | Yes        | Yes             |
+| `env sync`      | Yes   | Yes        | Yes (from lock) |
 
 `lookup` is the interesting case. Its purpose is querying package
 metadata — "tell me about this package." For index lookups, that's
@@ -94,14 +96,15 @@ values exist.
 Flatten the 8 reference variants into a smaller set of source kinds
 that users actually think about:
 
-| Kind | What it means | Example |
-| ---- | ------------- | ------- |
-| `index` | Look up in a package index (default) | `urn:example:sensors` |
-| `path` | Local directory containing a project | `./libs/sensors` |
-| `kpar` | Local or remote KPAR archive | `./sensors.kpar` or `https://example.com/sensors.kpar` |
-| `git` | Git repository | `https://github.com/example/sensors.git` |
+| Kind    | What it means                        | Example                                                |
+| ------- | ------------------------------------ | ------------------------------------------------------ |
+| `index` | Look up in a package index (default) | `urn:example:sensors`                                  |
+| `path`  | Local directory containing a project | `./libs/sensors`                                       |
+| `kpar`  | Local or remote KPAR archive         | `./sensors.kpar` or `https://example.com/sensors.kpar` |
+| `git`   | Git repository                       | `https://github.com/example/sensors.git`               |
 
 Notes:
+
 - `editable` is a mode of `path`, not a separate kind — could be a
   flag like `--editable` on `usage add`
 - `RemoteSrc` and `RemoteApi` from the reference are obscure. Do we
@@ -134,7 +137,7 @@ sysand usage add urn:example:sensors --source-kind git --source https://github.c
 ```
 
 The IRI is always the package identifier. The source kind and source
-value tell the system *how to get it*, overriding the default index
+value tell the system _how to get it_, overriding the default index
 lookup.
 
 ## Implications for Lookup
@@ -228,7 +231,7 @@ sysand.usage.add(ctx, "urn:example:sensors", "^2.0",
    workspaces handle local cross-project references, `env install` can
    install from a path or KPAR, and config can map IRIs to alternative
    sources. If source overrides don't belong on `usage add`, then the
-   manifest only tracks IRI + version constraint, and *how to fetch* is
+   manifest only tracks IRI + version constraint, and _how to fetch_ is
    always resolved through indexes and config. This simplifies the
    command tree significantly but may leave real workflows unserved.
    **Needs more thought before designing further.**

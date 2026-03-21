@@ -83,8 +83,8 @@ a shared type in the library and bindings:
 
 **Lookup options** (`--index`, `--default-index`, `--index-mode`, `--include-std`):
 
-| Surface | Type                                       |
-| ------- | ------------------------------------------ |
+| Surface | Type                                      |
+| ------- | ----------------------------------------- |
 | Rust    | `LookupOptions` struct                    |
 | Java    | `LookupOptions` builder                   |
 | JS/WASM | `LookupOptions` object/interface          |

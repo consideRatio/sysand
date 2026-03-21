@@ -48,6 +48,7 @@ One config file: `<project>/sysand.toml`. No user-level config, no
 workspace-level config, no config merging.
 
 Config controls:
+
 - Package index URLs (with default/non-default distinction and priority)
 - Project source overrides (mapping IRIs to specific sources)
 
@@ -63,21 +64,23 @@ pub enum ConfigMode {
 
 CLI mapping:
 
-| CLI | ConfigMode |
-| --- | --- |
-| (no flag) | `Auto` |
-| `--config auto` | `Auto` |
-| `--config none` | `None` |
+| CLI               | ConfigMode   |
+| ----------------- | ------------ |
+| (no flag)         | `Auto`       |
+| `--config auto`   | `Auto`       |
+| `--config none`   | `None`       |
 | `--config <PATH>` | `File(path)` |
 
 ## What the Library Reads
 
 Given a project path:
+
 - `<project>/.project.json` — project info
 - `<project>/.meta.json` — project metadata
 - `<project>/sysand.toml` — project config (unless `ConfigMode::None`)
 
 Given a workspace path:
+
 - `<workspace>/.workspace.json` — workspace info
 
 ## What Stays CLI-Only
@@ -89,13 +92,13 @@ Given a workspace path:
 
 ### Manifest vs Config Separation
 
-The manifest (`.project.json`) stores *what* a project depends on:
+The manifest (`.project.json`) stores _what_ a project depends on:
 IRI + optional version constraint. It never stores source information.
 
-The config (`sysand.toml`) stores *where* to get things: source
+The config (`sysand.toml`) stores _where_ to get things: source
 overrides that map IRIs to specific locations, and index URLs.
 
-The lockfile (`sysand-lock.toml`) stores *exactly what* was resolved:
+The lockfile (`sysand-lock.toml`) stores _exactly what_ was resolved:
 the specific version and source that was actually used.
 
 ### How Source Overrides Work

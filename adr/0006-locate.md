@@ -143,13 +143,13 @@ absolute path to the root.
 
 ## What Changes from ADR-0001
 
-| Before (ADR-0001)                    | After                                        |
-| ------------------------------------ | -------------------------------------------- |
-| Discovery is CLI-only                | Locate is a library operation, explicit       |
-| CLI implements its own traversal     | CLI calls `project::locate` / `workspace::locate` |
-| Library never walks the filesystem   | Library walks only when locate is called      |
-| `project root` CLI command           | `project locate` CLI command                  |
-| No workspace root command            | `workspace locate` CLI command                |
+| Before (ADR-0001)                  | After                                             |
+| ---------------------------------- | ------------------------------------------------- |
+| Discovery is CLI-only              | Locate is a library operation, explicit           |
+| CLI implements its own traversal   | CLI calls `project::locate` / `workspace::locate` |
+| Library never walks the filesystem | Library walks only when locate is called          |
+| `project root` CLI command         | `project locate` CLI command                      |
+| No workspace root command          | `workspace locate` CLI command                    |
 
 All other aspects of ADR-0001 remain unchanged: config is project-level
 only, `ProjectContext` and `WorkspaceContext` are the shared inputs,

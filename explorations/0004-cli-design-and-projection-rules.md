@@ -167,8 +167,8 @@ When multiple commands share the same set of options (e.g., lookup options:
 `--index`, `--default-index`, `--index-mode`, `--include-std`), they become a
 shared type in every surface:
 
-| Surface | Shape                                                       |
-| ------- | ----------------------------------------------------------- |
+| Surface | Shape                                                      |
+| ------- | ---------------------------------------------------------- |
 | Rust    | `LookupOptions` struct                                     |
 | Python  | `LookupOptions` dataclass, passed as keyword arg           |
 | Java    | `LookupOptions` builder, composed into per-command options |
@@ -176,11 +176,11 @@ shared type in every surface:
 
 ### Return types
 
-| CLI result kind | Rust                    | Python                  | Java                    | JS/WASM                 |
-| --------------- | ----------------------- | ----------------------- | ----------------------- | ----------------------- |
-| Mutation        | `MutationResult`        | `MutationResult`        | `MutationResult`        | `MutationResult`        |
-| Scalar query    | `ScalarFieldResult<T>`  | return `T` directly     | `ScalarFieldResult<T>`  | `T` directly            |
-| List query      | `ListFieldResult<T>`    | return `list[T]`        | `ListFieldResult<T>`    | `T[]`                   |
+| CLI result kind | Rust                   | Python                 | Java                   | JS/WASM                |
+| --------------- | ---------------------- | ---------------------- | ---------------------- | ---------------------- |
+| Mutation        | `MutationResult`       | `MutationResult`       | `MutationResult`       | `MutationResult`       |
+| Scalar query    | `ScalarFieldResult<T>` | return `T` directly    | `ScalarFieldResult<T>` | `T` directly           |
+| List query      | `ListFieldResult<T>`   | return `list[T]`       | `ListFieldResult<T>`   | `T[]`                  |
 | Resolve query   | `LookupFieldResult<T>` | `LookupFieldResult[T]` | `LookupFieldResult<T>` | `LookupFieldResult<T>` |
 
 Python and JS may unwrap thin wrappers for ergonomics. Rust and Java keep them

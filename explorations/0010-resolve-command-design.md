@@ -96,6 +96,7 @@ lookup
 ```
 
 Changes:
+
 - `<IRI_OR_URL>` → `<IRI>` (clearer — it's a package identifier)
 - `[<VERSION_CONSTRAINT>]` added as optional positional arg
 - `--relative-root` dropped (was for URL-as-locator, needs separate
@@ -106,13 +107,13 @@ Changes:
 With single-version resolution, every lookup command returns the same
 shape as its local counterpart:
 
-| Command | Returns | Local equivalent |
-| ------- | ------- | ---------------- |
-| `lookup show` | `PackageSnapshot` | `project show` → `ProjectSnapshot` |
-| `lookup info name get` | `String` | `project info name get` → `String` |
-| `lookup info maintainer list` | `Vec<String>` | `project info maintainer list` → `Vec<String>` |
-| `lookup info version get` | `String` | `project info version get` → `String` |
-| `lookup metadata created get` | `Option<DateTime>` | `project metadata created get` → `Option<DateTime>` |
+| Command                         | Returns              | Local equivalent                                        |
+| ------------------------------- | -------------------- | ------------------------------------------------------- |
+| `lookup show`                   | `PackageSnapshot`    | `project show` → `ProjectSnapshot`                      |
+| `lookup info name get`          | `String`             | `project info name get` → `String`                      |
+| `lookup info maintainer list`   | `Vec<String>`        | `project info maintainer list` → `Vec<String>`          |
+| `lookup info version get`       | `String`             | `project info version get` → `String`                   |
+| `lookup metadata created get`   | `Option<DateTime>`   | `project metadata created get` → `Option<DateTime>`     |
 | `lookup metadata checksum list` | `Vec<ChecksumEntry>` | `project metadata checksum list` → `Vec<ChecksumEntry>` |
 
 No `LookupMatch`, no `LookupFieldResult`, no generics. The return

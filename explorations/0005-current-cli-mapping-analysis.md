@@ -254,7 +254,7 @@ directory. This is a side-effect of the command existing.
 | `sysand lock`                          | #5       | `sysand lock update`                                   |
 | `sysand sync`                          | #5       | `sysand env sync`                                      |
 | `sysand info`                          | #1 #8    | `sysand project show`                                  |
-| `sysand info --iri X`                  | #1       | `sysand lookup show <IRI>`                            |
+| `sysand info --iri X`                  | #1       | `sysand lookup show <IRI>`                             |
 | `sysand info name`                     | #2 #8    | `sysand project info name get`                         |
 | `sysand info name --set X`             | #2       | `sysand project info name set <NAME>`                  |
 | `sysand info maintainer --add X`       | #2       | `sysand project info maintainer add <VAL>`             |

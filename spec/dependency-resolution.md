@@ -26,11 +26,13 @@ Reads the root project's `.project.json` usages and resolves them to
 exact versions. Produces `sysand-lock.toml`.
 
 **Inputs:**
+
 - Root project's `.project.json` — the usages (IRI + version constraint)
 - Root project's `sysand.toml` — source overrides, index URLs
 - Index servers — queried for available versions
 
 **Process:**
+
 1. Collect all direct usages from `.project.json`
 2. Build a resolver from `sysand.toml` (config overrides > stdlib > standard resolver)
 3. Run the PubGrub solver, which iteratively:
@@ -44,6 +46,7 @@ exact versions. Produces `sysand-lock.toml`.
 4. Write the solution to `sysand-lock.toml`
 
 **What the solver reads from each candidate:**
+
 - `.project.json` — version (for constraint matching) and usages
   (for transitive dependency discovery). Essential for resolution.
 - `.meta.json` — symbol exports, checksums, metamodel. Needed for the
@@ -58,6 +61,7 @@ owner controls where everything comes from.
 `sysand-lock.toml` records the complete resolved dependency graph.
 
 Each entry contains:
+
 - `name` — project name
 - `publisher` — optional
 - `version` — exact resolved version
@@ -75,6 +79,7 @@ lockfile. It should be committed to version control.
 Reads `sysand-lock.toml` and ensures `sysand_env/` matches it.
 
 For each project in the lockfile:
+
 - If already installed with the correct checksum → skip
 - If missing → fetch from the recorded source and install
 - If the installed version differs → replace
@@ -85,14 +90,14 @@ doesn't need config or index access for already-locked dependencies.
 
 ## When Resolution Runs
 
-| Command | Locks | Syncs |
-| ------- | ----- | ----- |
-| `lock update` | Yes | No |
-| `env sync` | No | Yes |
-| `usage add --update manifest` | No | No |
-| `usage add --update lock` | Yes | No |
-| `usage add --update sync` | Yes | Yes |
-| `env install` | No | Installs one package directly |
+| Command                       | Locks | Syncs                         |
+| ----------------------------- | ----- | ----------------------------- |
+| `lock update`                 | Yes   | No                            |
+| `env sync`                    | No    | Yes                           |
+| `usage add --update manifest` | No    | No                            |
+| `usage add --update lock`     | Yes   | No                            |
+| `usage add --update sync`     | Yes   | Yes                           |
+| `env install`                 | No    | Installs one package directly |
 
 `usage add` with `--update manifest` only edits `.project.json`.
 With `--update lock`, it also re-runs the solver. With `--update sync`

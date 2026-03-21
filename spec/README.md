@@ -21,6 +21,6 @@ the latest state.
 
 ## Relationship to Other Directories
 
-- **`spec/`** (here) — what the design *is* right now
-- **`adr/`** — *why* each decision was made (immutable, historical)
-- **`explorations/`** — *how* we arrived at decisions (immutable, historical)
+- **`spec/`** (here) — what the design _is_ right now
+- **`adr/`** — _why_ each decision was made (immutable, historical)
+- **`explorations/`** — _how_ we arrived at decisions (immutable, historical)

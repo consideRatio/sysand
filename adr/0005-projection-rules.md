@@ -82,8 +82,8 @@ operations.
 Related CLI options that appear together across multiple commands become a
 shared type in every surface:
 
-| Surface | Shape                             |
-| ------- | --------------------------------- |
+| Surface | Shape                            |
+| ------- | -------------------------------- |
 | Rust    | `LookupOptions` struct           |
 | Java    | `LookupOptions` builder          |
 | JS/WASM | `LookupOptions` object/interface |

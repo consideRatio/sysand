@@ -20,7 +20,7 @@ We need to decide where discovery and config loading responsibilities live.
 
 ## Decision
 
-### 1. Discovery is CLI-only *(superseded by ADR-0006)*
+### 1. Discovery is CLI-only _(superseded by ADR-0006)_
 
 ~~Path traversal (walking up the directory tree to find `.project.json` or
 `.workspace.json`) is a CLI convenience. The library does not perform

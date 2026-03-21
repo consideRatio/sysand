@@ -51,23 +51,23 @@ lookup. `--relative-root` is removed.
 
 ### 4. Return types mirror local commands
 
-| Command | Returns |
-| ------- | ------- |
-| `lookup show` | `PackageSnapshot` |
-| `lookup info name get` | `String` |
-| `lookup info version get` | `String` |
-| `lookup info description get` | `Option<String>` |
-| `lookup info license get` | `Option<String>` |
-| `lookup info website get` | `Option<String>` |
-| `lookup info maintainer list` | `Vec<String>` |
-| `lookup info topic list` | `Vec<String>` |
-| `lookup info usage list` | `Vec<UsageEntry>` |
-| `lookup metadata created get` | `Option<DateTime>` |
-| `lookup metadata index list` | `Vec<IndexEntry>` |
-| `lookup metadata checksum list` | `Vec<ChecksumEntry>` |
-| `lookup metadata metamodel get` | `Option<Metamodel>` |
-| `lookup metadata includes-derived get` | `Option<bool>` |
-| `lookup metadata includes-implied get` | `Option<bool>` |
+| Command                                | Returns              |
+| -------------------------------------- | -------------------- |
+| `lookup show`                          | `PackageSnapshot`    |
+| `lookup info name get`                 | `String`             |
+| `lookup info version get`              | `String`             |
+| `lookup info description get`          | `Option<String>`     |
+| `lookup info license get`              | `Option<String>`     |
+| `lookup info website get`              | `Option<String>`     |
+| `lookup info maintainer list`          | `Vec<String>`        |
+| `lookup info topic list`               | `Vec<String>`        |
+| `lookup info usage list`               | `Vec<UsageEntry>`    |
+| `lookup metadata created get`          | `Option<DateTime>`   |
+| `lookup metadata index list`           | `Vec<IndexEntry>`    |
+| `lookup metadata checksum list`        | `Vec<ChecksumEntry>` |
+| `lookup metadata metamodel get`        | `Option<Metamodel>`  |
+| `lookup metadata includes-derived get` | `Option<bool>`       |
+| `lookup metadata includes-implied get` | `Option<bool>`       |
 
 These are the same types as the corresponding `project info` and
 `project metadata` commands.
@@ -125,7 +125,10 @@ String name = client.lookup().info().name().get(
 
 ```ts
 const name = await sysand.lookup.info.name.get(
-    "urn:example:sensors", undefined, {});
+  "urn:example:sensors",
+  undefined,
+  {},
+);
 ```
 
 **Python:**
@@ -136,13 +139,13 @@ name = sysand.lookup.info.name.get("urn:example:sensors")
 
 ## What Changed
 
-| Before | After |
-| ------ | ----- |
-| `<IRI_OR_URL>` | `<IRI>` |
-| No version constraint arg | Optional `[<VERSION_CONSTRAINT>]` positional |
-| Returns multiple matches | Returns one result |
-| `LookupMatch<T>` / `LookupFieldResult<T>` | Same types as local commands |
-| `--relative-root <PATH>` on every command | Removed |
+| Before                                    | After                                        |
+| ----------------------------------------- | -------------------------------------------- |
+| `<IRI_OR_URL>`                            | `<IRI>`                                      |
+| No version constraint arg                 | Optional `[<VERSION_CONSTRAINT>]` positional |
+| Returns multiple matches                  | Returns one result                           |
+| `LookupMatch<T>` / `LookupFieldResult<T>` | Same types as local commands                 |
+| `--relative-root <PATH>` on every command | Removed                                      |
 
 ## Consequences
 

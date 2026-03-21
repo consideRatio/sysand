@@ -307,15 +307,15 @@ JS `"project-not-found"`, Python `ProjectNotFoundError` (subclass per code).
 
 ### Return types project trivially
 
-| Rust return | Java | JS/WASM | Python |
-| ----------- | ---- | ------- | ------ |
-| `String` | `String` | `string` | `str` |
-| `Option<String>` | `@Nullable String` | `string \| null` | `str \| None` |
-| `bool` | `boolean` | `boolean` | `bool` |
-| `Vec<String>` | `List<String>` | `string[]` | `list[str]` |
-| `Vec<UsageEntry>` | `List<UsageEntry>` | `UsageEntry[]` | `list[UsageEntry]` |
-| `BuildOutput` | `BuildOutput` | `BuildOutput` | `BuildOutput` |
-| `()` | `void` | `Promise<void>` | `None` |
+| Rust return       | Java               | JS/WASM          | Python             |
+| ----------------- | ------------------ | ---------------- | ------------------ |
+| `String`          | `String`           | `string`         | `str`              |
+| `Option<String>`  | `@Nullable String` | `string \| null` | `str \| None`      |
+| `bool`            | `boolean`          | `boolean`        | `bool`             |
+| `Vec<String>`     | `List<String>`     | `string[]`       | `list[str]`        |
+| `Vec<UsageEntry>` | `List<UsageEntry>` | `UsageEntry[]`   | `list[UsageEntry]` |
+| `BuildOutput`     | `BuildOutput`      | `BuildOutput`    | `BuildOutput`      |
+| `()`              | `void`             | `Promise<void>`  | `None`             |
 
 No generic wrappers to monomorphize. No wrapper types to maintain.
 Domain structs like `BuildOutput` and `UsageEntry` are concrete types
@@ -324,6 +324,7 @@ that binding generators handle directly.
 ### Maintenance effort comparison
 
 **With wrappers (original ADR-0005):**
+
 - 4 generic wrapper types to define in Rust
 - Each wrapper must be projected to 4 binding surfaces
 - Binding generators must monomorphize each instantiation
@@ -331,6 +332,7 @@ that binding generators handle directly.
 - Adding a field to a wrapper affects every operation using it
 
 **Without wrappers (proposed):**
+
 - Domain structs only — defined as needed
 - Each struct projects once to each surface
 - No monomorphization needed
