@@ -59,12 +59,15 @@ Reworked:  sysand project clone <LOC> --deps all|none
 **Validation relaxation:**
 
 ```
-Current:   sysand project init --no-semver --no-spdx
-Reworked:  sysand project init --allow-non-semver --allow-non-spdx
+Current:   sysand project init --no-spdx
+Reworked:  sysand project init --allow-non-spdx
 ```
 
-Still booleans, but positive framing — the flag says what it _allows_,
+Still a boolean, but positive framing — the flag says what it _allows_,
 not what it _disables_.
+
+Note: `--allow-non-semver` was originally planned here but removed —
+semver is now always required (ADR-0007).
 
 **Symbol control:**
 

@@ -44,7 +44,6 @@ sysand
       [--name <NAME>]
       [--publisher <PUBLISHER>]
       [--version <VERSION>]
-      [--allow-non-semver]
       [--license <SPDX_EXPR>]
       [--allow-non-spdx]
 
@@ -86,7 +85,7 @@ sysand
         clear [--project <PATH>]
       version
         get [--project <PATH>]
-        set <VERSION> [--project <PATH>] [--allow-non-semver]
+        set <VERSION> [--project <PATH>]
       license
         get [--project <PATH>]
         set <SPDX_EXPR> [--project <PATH>] [--allow-non-spdx]
@@ -253,7 +252,7 @@ workspace context.
 | `env` (no subcmd) → `env create`                                          | Explicit verb                           | 0002 |
 | `--no-lock`/`--no-sync` → `--update manifest\|lock\|sync`                 | Positive enum                           | 0003 |
 | `--no-deps` → `--deps all\|none`                                          | Positive enum                           | 0003 |
-| `--no-semver` → `--allow-non-semver`                                      | Positive framing                        | 0003 |
+| `--no-semver` → semver always required                                    | Semver required (ADR-0007)              | 0007 |
 | `--no-index-symbols` → `--index-symbols on\|off`                          | Positive enum                           | 0003 |
 | `--path` (5 meanings) → `--project`/`--env`/`--target`                    | Stable names                            | 0003 |
 | `--no-config` → `--config none`                                           | Positive enum                           | 0001 |
