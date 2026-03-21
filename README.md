@@ -56,6 +56,15 @@ Read `adr/` for the full decisions. Summary:
   Returns a path, not a context — the caller constructs their own context.
   Implicit locate from CWD remains CLI-only.
 
+- **ADR-0007**: Semver is required for all project versions. No
+  `--allow-non-semver` flag. Simplifies version resolution, constraint
+  matching, and pre-release filtering.
+
+- **ADR-0008**: Resolve always returns one package. Takes an IRI and
+  optional version constraint, resolves to a single version. Return
+  types mirror local `project info`/`metadata` commands. Pre-release
+  inclusion controlled by the constraint string.
+
 ## Terminology
 
 - **Usage** (not "dependency") — the KerML/SysML term for a project's

@@ -179,25 +179,24 @@ sysand
       [--compression stored|deflated|bzip2|zstd|xz|ppmd]
 
   resolve
-    show <IRI_OR_URL>
-      [--relative-root <PATH>]
+    show <IRI> [<VERSION_CONSTRAINT>]
       [resolve options]
     info
-      name get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      description get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      version get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      license get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      website get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      maintainer list <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      topic list <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      usage list <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
+      name get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      description get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      version get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      license get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      website get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      maintainer list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      topic list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      usage list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
     metadata
-      created get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      index list <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      checksum list <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      metamodel get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      includes-derived get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      includes-implied get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
+      created get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      index list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      checksum list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      metamodel get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      includes-derived get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      includes-implied get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
 ```
 
 Where `[resolve options]` expands to:
