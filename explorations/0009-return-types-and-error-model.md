@@ -1,7 +1,7 @@
 # Exploration 0009: Return Types and Error Model
 
-**Status: Open** — direction established (natural return types, drop
-wrappers), needs ADR update to ADR-0005.
+**Status: Distilled into ADR-0005 amendment** — direction established (natural return types, drop
+wrappers), ADR-0005 updated.
 
 ## Starting Point
 

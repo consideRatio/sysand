@@ -104,14 +104,10 @@ See `adr/0004-command-tree.md` for the full tree.
 
 ### Return types
 
-Every operation returns a typed result object:
-
-- `ScalarFieldResult<T>` — single value queries
-- `ListFieldResult<T>` — list queries
-- `MutationResult` — mutations
-- `ResolveFieldResult<T>` — remote queries
-
-No unwrapping in any surface.
+Every operation returns `Result<T, SysandError>` where `T` is the natural
+type for that operation — `()` for mutations, `String` for a name,
+`Vec<UsageEntry>` for a list, `BuildOutput` for a build. No universal
+wrapper types.
 
 ## Directory Structure
 

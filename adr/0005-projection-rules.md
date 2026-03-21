@@ -92,20 +92,20 @@ shared type in every surface:
 Paired flags (`--source-kind` + `--source`) follow the same rule — they
 become a single `SourceSpec` type.
 
-### 5. Every operation returns a typed result object
+### 5. Natural return types
 
-All surfaces use the same wrapper types. No unwrapping in any surface.
+Every operation returns `Result<T, SysandError>` where `T` is the natural
+type for that operation:
 
-| Result kind   | Type                    | All surfaces            |
-| ------------- | ----------------------- | ----------------------- |
-| Scalar query  | `ScalarFieldResult<T>`  | `.value` to access      |
-| List query    | `ListFieldResult<T>`    | `.values` to access     |
-| Mutation      | `MutationResult`        | `.changed`, `.warnings` |
-| Resolve query | `ResolveFieldResult<T>` | `.matches` to access    |
+- `()` for mutations with no meaningful output (`usage add`, `project info name set`)
+- A primitive for simple queries (`project info name get` → `String`)
+- A `Vec` for list queries (`usage list` → `Vec<UsageEntry>`)
+- A domain struct for operations with structured output (`project build` → `BuildOutput`)
 
-This is a simple, teachable rule: every operation returns a typed result
-object. Adding fields to wrappers is backwards-compatible; changing a bare
-return type to a wrapper is breaking.
+No universal wrapper types. If a return type needs to grow later (e.g.,
+`String` becomes `NameInfo { name, source_file }`), that's a targeted
+breaking change on one operation — acceptable pre-1.0 and evaluable
+post-1.0 on a case-by-case basis.
 
 ### 6. Errors
 
@@ -148,7 +148,7 @@ present sync APIs (except JS/WASM which is always `Promise`-based).
 
 ```rust
 let ctx = ProjectContext::new(".");
-let result: MutationResult = usage::add(
+usage::add(
     &ctx,
     "urn:example",
     Some("1.0.0"),
@@ -167,7 +167,7 @@ let result: MutationResult = usage::add(
 
 ```java
 ProjectContext ctx = new ProjectContext(".");
-MutationResult result = client.usage().add(
+client.usage().add(
     ctx,
     "urn:example",
     "1.0.0",
@@ -182,7 +182,7 @@ MutationResult result = client.usage().add(
 
 ```ts
 const ctx = new ProjectContext(".");
-const result = await sysand.usage.add(ctx, "urn:example", "1.0.0", {
+await sysand.usage.add(ctx, "urn:example", "1.0.0", {
   update: "sync",
   resolve: { index: ["https://registry.com"] },
 });
@@ -192,7 +192,7 @@ const result = await sysand.usage.add(ctx, "urn:example", "1.0.0", {
 
 ```python
 ctx = ProjectContext(".")
-result = sysand.usage.add(
+sysand.usage.add(
     ctx,
     "urn:example",
     "1.0.0",
@@ -204,7 +204,15 @@ result = sysand.usage.add(
 ## Consequences
 
 - Projection is mechanical — no per-command design decisions needed
-- All surfaces share the same result types, error codes, and options types
+- All surfaces share the same error codes and options types
 - Context objects are reusable across operations in all languages
-- Adding fields to result wrappers is non-breaking in all surfaces
+- Return types are natural (primitives, domain structs, `Vec`s) — no wrapper ceremony
 - The binding layer's only job is casing conversion and runtime management
+
+## Amendment Log
+
+- **2026-03-21**: §5 rewritten — dropped wrapper taxonomy
+  (`ScalarFieldResult`, `ListFieldResult`, `MutationResult`,
+  `ResolveFieldResult`). Operations now return natural types via
+  `Result<T, SysandError>`. Concrete example updated to remove
+  `MutationResult`. (Per exploration 0009)

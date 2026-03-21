@@ -4,6 +4,11 @@ Decisions made and their outcomes, in reverse chronological order.
 
 ## 2026-03-21
 
+- **ADR-0005 updated: Natural return types** — Dropped the four-wrapper
+  taxonomy (`ScalarFieldResult`, `ListFieldResult`, `MutationResult`,
+  `ResolveFieldResult`). Every operation now returns `Result<T, SysandError>`
+  where `T` is the natural type. Per exploration 0009.
+
 - **ADR-0008: Single-version resolve** — Resolve always returns one
   package. Takes IRI + optional version constraint. Return types
   mirror local project info/metadata commands. `--relative-root` and
