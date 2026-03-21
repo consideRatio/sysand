@@ -4,6 +4,14 @@ Decisions made and their outcomes, in reverse chronological order.
 
 ## 2026-03-21
 
+- **spec/ directory populated** — Living specification created with 6
+  files: command-tree, projection-rules, option-rules,
+  discovery-and-config, error-model, version-resolution. These are
+  the single source of truth for the current design.
+
+- **`resolve` renamed to `lookup`** — Public command namespace for
+  querying indexes. "Resolve" reserved for internal solver concept.
+
 - **ADR-0005 updated: Natural return types** — Dropped the four-wrapper
   taxonomy (`ScalarFieldResult`, `ListFieldResult`, `MutationResult`,
   `LookupFieldResult`). Every operation now returns `Result<T, SysandError>`
