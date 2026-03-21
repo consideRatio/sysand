@@ -123,14 +123,13 @@ explorations and discussions. This document pins them down.
 - **Package** — We use "interchange project" or just "project"
   for the formal unit. "Package" is acceptable in casual discussion
   but not in APIs or docs.
-- **Registry** — We use "index" for the package hosting service.
-  "Registry" appears in the reference Source enum but we haven't
-  committed to the term.
+- **Registry** — We use "index." "Registry" appears in the reference
+  Source enum but should be renamed in the rework.
 
 ## Open Terminology Questions
 
-1. **Index vs registry** — The reference code uses both. We should
-   pick one. "Index" aligns with `--index` flag and current ADRs.
+1. **Index vs registry** — Decided: use "index." Aligns with `--index`
+   flag and all ADRs. "Registry" in the reference code should be renamed.
 2. **Resolve vs query vs lookup** — `resolve` is the namespace name
    and implies finding the best match. "Query" and "lookup" are
    informal. Should we be precise about when to use each?

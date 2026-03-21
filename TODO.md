@@ -7,3 +7,4 @@ Open work items only. See `CHANGELOG.md` for completed decisions.
 - Subfolder specification: when a source contains multiple projects, how to specify which one? Open design space includes: encoding in the IRI, --source-path flag, auto-discovery by matching IRI to .project.json identifiers. Relevant for git monorepos and multi-project directories.
 - Scaffold Rust workspace: crate structure, module layout mirroring command tree
 - Define JS/WASM projection rules in detail (async/Promise semantics, wasm-bindgen constraints)
+- Clarify "package" vs "project" terminology: decide if "package" is acceptable in user-facing text (CLI help, error messages, docs) or if we stick with "interchange project" / "project" everywhere. Make consistent across ADRs, explorations, and code.
