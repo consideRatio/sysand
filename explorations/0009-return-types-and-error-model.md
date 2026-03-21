@@ -1,5 +1,8 @@
 # Exploration 0009: Return Types and Error Model
 
+**Status: Open** — direction established (natural return types, drop
+wrappers), needs ADR update to ADR-0005.
+
 ## Starting Point
 
 ADR-0005 establishes four result wrappers (`ScalarFieldResult<T>`,

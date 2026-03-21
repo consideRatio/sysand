@@ -1,5 +1,7 @@
 # 0008: Projection Rules — Stress Test
 
+**Status: Distilled into ADRs 0001–0005**
+
 ## Purpose
 
 Before locking projection rules into an ADR, test them against concrete

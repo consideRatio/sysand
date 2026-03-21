@@ -1,5 +1,7 @@
 # 0003: Design Intent from reworked-sysand Exploration
 
+**Status: Distilled into ADRs 0001–0005**
+
 ## What Was Explored
 
 A separate design workspace (`reworked-sysand`) produced a complete design package:

@@ -1,5 +1,7 @@
 # 0002: Schema Draft — `init` Command
 
+**Status: Distilled into ADRs 0001–0005**
+
 ## Context
 
 Exploring what a meta-description schema looks like for Sysand operations.

@@ -130,3 +130,10 @@ Before adding a CLI command, verify:
 - New commands follow the grammar mechanically — no design decisions per command
 - Deeper command paths (e.g., `project info maintainer add`) mean more typing
   for CLI users, but the consistency is worth the tradeoff
+
+## Amendment Log
+
+- **2026-03-21**: `build` namespace replaced with `workspace` namespace.
+  `build` moved to verb list. `locate` added to verb list (ADR-0006).
+  `workspace` added to noun list. Good/bad example updated to
+  `sysand project build` / `sysand workspace build`.

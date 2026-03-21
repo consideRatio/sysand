@@ -265,3 +265,16 @@ workspace context.
 - All options follow stable naming and positive framing (per ADR-0003)
 - The CLI crate becomes a thin parser over the library API
 - Deeper command paths mean more typing but consistent discoverability
+
+## Amendment Log
+
+- **2026-03-21**: `build` namespace removed. `project build` and
+  `workspace build` added as verbs under their respective namespaces.
+  `workspace` added as a new top-level namespace.
+- **2026-03-21**: `project root` renamed to `project locate`.
+  `workspace locate` added. (ADR-0006)
+- **2026-03-21**: `--allow-non-semver` removed from `project init`
+  and `project info version set`. (ADR-0007)
+- **2026-03-21**: Resolve section rewritten — `<IRI_OR_URL>` replaced
+  with `<IRI>`, `[<VERSION_CONSTRAINT>]` added, `--relative-root`
+  removed. Single-version resolution. (ADR-0008)

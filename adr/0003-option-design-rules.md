@@ -121,3 +121,8 @@ explicit and documented.
 - Shared option groups reduce type proliferation in the library
 - Every option's default is explicit, making library behavior predictable
   without CLI context
+
+## Amendment Log
+
+- **2026-03-21**: `--allow-non-semver` removed from validation relaxation
+  example — semver is now always required (ADR-0007).

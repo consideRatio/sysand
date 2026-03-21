@@ -1,5 +1,8 @@
 # Exploration 0011: IRI Variants and Source Types
 
+**Status: Parked** — fundamental question unresolved: do --source-kind/--source
+belong on commands at all?
+
 ## Context
 
 Several commands accept what ADR-0004 calls `<IRI>` or `<IRI_OR_URL>`,

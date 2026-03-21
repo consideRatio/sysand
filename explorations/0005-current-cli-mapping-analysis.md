@@ -1,5 +1,7 @@
 # 0005: Current CLI — Mapping Analysis Against Design Principles
 
+**Status: Distilled into ADRs 0001–0005**
+
 ## Current Command Tree (v0.0.10)
 
 ```

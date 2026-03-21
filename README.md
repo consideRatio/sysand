@@ -117,8 +117,10 @@ No unwrapping in any surface.
 
 ```
 adr/            Architectural Decision Records (numbered)
-explorations/   Working exploration documents (numbered)
+explorations/   Working exploration documents (numbered, with status)
 reference/      Reference implementation (existing codebase, read-only)
+TODO.md         Open work items
+CHANGELOG.md    Completed decisions and their dates
 ```
 
 ## Working Style

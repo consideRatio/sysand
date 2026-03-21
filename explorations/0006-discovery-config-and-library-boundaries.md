@@ -1,5 +1,7 @@
 # 0006: Discovery, Config, and Library Boundaries
 
+**Status: Distilled into ADRs 0001–0005**
+
 ## Decision Context
 
 The CLI knows the current working directory. The library doesn't. We need to

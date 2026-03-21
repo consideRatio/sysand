@@ -1,5 +1,7 @@
 # Exploration 0010: Resolve Command Design
 
+**Status: Distilled into ADR-0008**
+
 ## Context
 
 The current resolve command tree (ADR-0004) returns multiple matching

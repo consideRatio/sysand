@@ -1,5 +1,7 @@
 # 0001: ProjectRead / ProjectMut Trait System
 
+**Status: Distilled into ADRs 0001–0005**
+
 ## What It Is
 
 `ProjectRead` and `ProjectMut` are the central abstraction for accessing interchange

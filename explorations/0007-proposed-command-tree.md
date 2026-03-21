@@ -1,5 +1,7 @@
 # 0007: Proposed Command Tree
 
+**Status: Distilled into ADRs 0001–0005**
+
 ## Governing ADRs
 
 - ADR-0001: Discovery and config boundaries (ProjectContext, WorkspaceContext)

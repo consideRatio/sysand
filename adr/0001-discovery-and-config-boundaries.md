@@ -184,3 +184,10 @@ Given a workspace path:
 - Discovery logic only needs to be maintained in the CLI crate
 - User-level config (auth, personal indexes) can be added later as a
   separate layer without changing this decision
+
+## Amendment Log
+
+- **2026-03-21**: §1 superseded by ADR-0006 — locate is now a library
+  operation, implicit locate from CWD remains CLI-only. "What Stays
+  CLI-Only" section updated. `build::workspace` example updated to
+  `workspace::build` (build namespace fix).

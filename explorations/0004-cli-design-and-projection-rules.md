@@ -1,5 +1,7 @@
 # 0004: CLI Design Rules and Projection to Library & Bindings
 
+**Status: Distilled into ADRs 0001–0005**
+
 ## Purpose
 
 Rules for designing CLI commands such that a Rust library API, Python bindings,

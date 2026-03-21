@@ -1,7 +1,10 @@
-- Formalize return types and error model — natural return types direction explored (0009), needs ADR update to drop wrapper taxonomy from ADR-0005
-- Explore resolve command design: decided (ADR-0008) — single-version resolution, index-only. Non-index sources deferred pending source-kind question
-- Consider internal resolution needs: dependency resolution (env sync, env install, lock update) needs to explore many versions and fetch usage lists across a dependency tree. ADR-0008 simplifies the public API to single-version, but the solver internally may need multi-version index queries, transitive usage traversal, etc. Are these private functions in the library, or do they surface as lower-level public API for advanced consumers? How does the public resolve API relate to the internal solver?
-- Explore IRI variants: explored (0011), fundamental question parked — do --source-kind/--source belong on commands at all, or are indexes + config + workspaces sufficient?
-- Subfolder specification: when a source (git repo, local directory, KPAR) contains multiple projects, how does the user specify which subfolder? Open design space includes: encoding in the IRI, a --source-path flag, auto-discovery by matching IRI to .project.json identifiers, or something else. Relevant for git monorepos, multi-project directories, and --relative-root's original use case (now dropped from resolve).
+# TODO
+
+Open work items only. See `CHANGELOG.md` for completed decisions.
+
+- Update ADR-0005 to drop wrapper taxonomy — replace with natural return types per exploration 0009
+- Consider internal resolution needs: dependency resolution (env sync, env install, lock update) needs multi-version index queries and transitive usage traversal internally. How does the public resolve API relate to the internal solver? Private functions, or lower-level public API for advanced consumers?
+- Explore whether --source-kind/--source belong on commands at all, or if indexes + config + workspaces are sufficient (parked in exploration 0011)
+- Subfolder specification: when a source contains multiple projects, how to specify which one? Open design space includes: encoding in the IRI, --source-path flag, auto-discovery by matching IRI to .project.json identifiers. Relevant for git monorepos and multi-project directories.
 - Scaffold Rust workspace: crate structure, module layout mirroring command tree
 - Define JS/WASM projection rules in detail (async/Promise semantics, wasm-bindgen constraints)
