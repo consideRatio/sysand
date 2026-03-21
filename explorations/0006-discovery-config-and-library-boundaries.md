@@ -202,6 +202,6 @@ future, it's an additive decision.
    name and location? Or should it be something like `<project>/.sysand.toml`
    (hidden) or `<project>/sysand/config.toml` (nested)?
 
-2. ~~**Config and resolve operations**~~ **Resolved**: `resolve` commands don't
+2. ~~**Config and resolve operations**~~ **Resolved**: `lookup` commands don't
    accept `--config`. They use explicit `--index`/`--default-index` flags only.
-   No config fields exist that aren't already covered by resolve option flags.
+   No config fields exist that aren't already covered by lookup option flags.

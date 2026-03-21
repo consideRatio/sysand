@@ -2,7 +2,7 @@
 
 - **Status**: Accepted
 - **Date**: 2026-03-19
-- **Scope**: Project operations only. Workspace and resolve operations are out
+- **Scope**: Project operations only. Workspace and lookup operations are out
   of scope for this ADR.
 
 ## Context

@@ -42,10 +42,10 @@ Read `adr/` for the full decisions. Summary:
 - **ADR-0003**: Option names are stable across commands (`--project` always
   means project root). No `--no-*` flags — use positive enums
   (`--update manifest|lock|sync`, `--deps all|none`). Shared option groups
-  become shared types (`ResolveOptions`).
+  become shared types (`LookupOptions`).
 
 - **ADR-0004**: Complete command tree with 6 namespaces: `project`, `usage`,
-  `lock`, `env`, `workspace`, `resolve`. Every command has one return shape.
+  `lock`, `env`, `workspace`, `lookup`. Every command has one return shape.
 
 - **ADR-0005**: Projection rules for all surfaces. Context objects
   (`ProjectContext`) are explicit everywhere. Every operation returns a typed
@@ -60,8 +60,8 @@ Read `adr/` for the full decisions. Summary:
   `--allow-non-semver` flag. Simplifies version resolution, constraint
   matching, and pre-release filtering.
 
-- **ADR-0008**: Resolve always returns one package. Takes an IRI and
-  optional version constraint, resolves to a single version. Return
+- **ADR-0008**: Lookup always returns one package. Takes an IRI and
+  optional version constraint, returns a single version. Return
   types mirror local `project info`/`metadata` commands. Pre-release
   inclusion controlled by the constraint string.
 
@@ -82,7 +82,7 @@ sysand usage ...      Usage management (add/remove/list)
 sysand lock ...       Lockfile operations
 sysand env ...        Environment creation, sync, install/uninstall
 sysand workspace ...  Workspace operations
-sysand resolve ...    Remote package queries (read-only)
+sysand lookup ...     Index package queries (read-only)
 ```
 
 See `adr/0004-command-tree.md` for the full tree.

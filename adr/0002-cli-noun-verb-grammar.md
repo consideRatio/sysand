@@ -42,7 +42,7 @@ sysand usage ...         usage management (add/remove/list)
 sysand lock ...          lockfile operations
 sysand env ...           environment management
 sysand workspace ...     workspace operations
-sysand resolve ...       remote package queries (read-only)
+sysand lookup ...       index package queries (read-only)
 ```
 
 ### The command path is the API path
@@ -86,10 +86,10 @@ different commands:
 
 ```
 Good:  sysand project show      →  ProjectSnapshot
-       sysand resolve show      →  ResolveMatchesResult
+       sysand lookup show      →  PackageSnapshot
 
 Bad:   sysand info --path .     →  ProjectSnapshot
-       sysand info --iri x      →  Vec<ResolveMatch>
+       sysand info --iri x      →  PackageSnapshot
 ```
 
 ### Required data is positional, modifiers are options

@@ -60,7 +60,7 @@ sysand info --auto-location  →  tries IRI, falls back to path
 **Principle violated:** Rule 2 (one command = one return shape), Rule 3 (stable
 option names — `--path` here means "project to inspect" not "project root").
 
-**Proposed fix:** Split into `project show` (local) and `resolve show` (remote).
+**Proposed fix:** Split into `project show` (local) and `lookup show` (remote).
 
 ### Issue 2: Flags as verbs in `info` subcommands
 
@@ -154,7 +154,7 @@ sysand lock          (lock management)
 sysand sync          (env management)
 sysand sources       (source listing)
 sysand print-root    (project query)
-sysand info          (project info + remote resolve)
+sysand info          (project info + remote lookup)
 sysand env           (env management)
 ```
 
@@ -177,7 +177,7 @@ sysand lock update
 sysand env create|sync|install|uninstall|list
 sysand env source list
 sysand build project|workspace
-sysand resolve show|info|metadata
+sysand lookup show|info|metadata
 ```
 
 ### Issue 6: `build` mode is implicit
@@ -229,7 +229,7 @@ options are meaningless.
 **Principle violated:** Options should be relevant to the operation.
 
 **Proposed fix:** When `info` is split into local (`project info`) and remote
-(`resolve info`), resolution options only appear on `resolve` commands.
+(`resolve info`), resolution options only appear on `lookup` commands.
 
 ### Issue 10: `env` creates environment implicitly
 
@@ -254,7 +254,7 @@ directory. This is a side-effect of the command existing.
 | `sysand lock`                          | #5       | `sysand lock update`                                   |
 | `sysand sync`                          | #5       | `sysand env sync`                                      |
 | `sysand info`                          | #1 #8    | `sysand project show`                                  |
-| `sysand info --iri X`                  | #1       | `sysand resolve show <IRI>`                            |
+| `sysand info --iri X`                  | #1       | `sysand lookup show <IRI>`                            |
 | `sysand info name`                     | #2 #8    | `sysand project info name get`                         |
 | `sysand info name --set X`             | #2       | `sysand project info name set <NAME>`                  |
 | `sysand info maintainer --add X`       | #2       | `sysand project info maintainer add <VAL>`             |

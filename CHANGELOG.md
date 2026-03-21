@@ -6,10 +6,10 @@ Decisions made and their outcomes, in reverse chronological order.
 
 - **ADR-0005 updated: Natural return types** — Dropped the four-wrapper
   taxonomy (`ScalarFieldResult`, `ListFieldResult`, `MutationResult`,
-  `ResolveFieldResult`). Every operation now returns `Result<T, SysandError>`
+  `LookupFieldResult`). Every operation now returns `Result<T, SysandError>`
   where `T` is the natural type. Per exploration 0009.
 
-- **ADR-0008: Single-version resolve** — Resolve always returns one
+- **ADR-0008: Single-version lookup** — Lookup always returns one
   package. Takes IRI + optional version constraint. Return types
   mirror local project info/metadata commands. `--relative-root` and
   `<IRI_OR_URL>` dropped.
@@ -29,10 +29,10 @@ Decisions made and their outcomes, in reverse chronological order.
 
 - **Return types direction** (exploration 0009) — Drop the four-wrapper
   taxonomy (`ScalarFieldResult`, `ListFieldResult`, `MutationResult`,
-  `ResolveFieldResult`). Each operation returns `Result<T, SysandError>`
+  `LookupFieldResult`). Each operation returns `Result<T, SysandError>`
   where `T` is the natural type. ADR-0005 update still pending.
 
-- **Resolve design direction** (exploration 0010) — Single-version
+- **Lookup design direction** (exploration 0010) — Single-version lookup
   resolution, pre-release opt-in via constraint string only, no flags.
   Distilled into ADR-0008.
 

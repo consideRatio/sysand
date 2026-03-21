@@ -6,7 +6,7 @@ wrappers), ADR-0005 updated.
 ## Starting Point
 
 ADR-0005 establishes four result wrappers (`ScalarFieldResult<T>`,
-`ListFieldResult<T>`, `MutationResult`, `ResolveFieldResult<T>`) and an
+`ListFieldResult<T>`, `MutationResult`, `LookupFieldResult<T>`) and an
 error type. This exploration questions whether those wrappers earn their
 keep, and proposes a simpler alternative.
 
@@ -107,16 +107,16 @@ project metadata metamodel get        → Option<Metamodel>
 project metadata created get          → Option<DateTime>
 ```
 
-**Returns resolve-specific structures:**
+**Returns lookup-specific structures:**
 
 ```
-resolve show                          → Vec<ResolveMatch>
-resolve info name get                 → Vec<ResolveMatch<String>>
-resolve info maintainer list          → Vec<ResolveMatch<Vec<String>>>
+lookup show                          → Vec<LookupMatch>
+lookup info name get                 → Vec<LookupMatch<String>>
+lookup info maintainer list          → Vec<LookupMatch<Vec<String>>>
 ```
 
-Resolve is the one area where a wrapper-like structure is inherent to the
-domain — a query can match multiple versions. But `Vec<ResolveMatch<T>>`
+Lookup is the one area where a wrapper-like structure is inherent to the
+domain — a query can match multiple versions. But `Vec<LookupMatch<T>>`
 is just the natural shape of the data, not a speculative wrapper.
 
 ### If a Return Type Needs to Grow
@@ -226,15 +226,15 @@ except PackageNotFoundError as e:
     print(f"Context: {e.context}")  # "urn:missing:package"
 ```
 
-### Scenario 6: Python — resolve query
+### Scenario 6: Python — lookup query
 
 ```python
-matches = sysand.resolve.show("urn:example:sensors")
+matches = sysand.lookup.show("urn:example:sensors")
 for m in matches:
     print(f"{m.iri} @ {m.version}")
 ```
 
-`matches` is just a list of `ResolveMatch` objects. The list structure
+`matches` is just a list of `LookupMatch` objects. The list structure
 is the natural shape of the data, not a wrapper.
 
 ## Error Model
@@ -346,13 +346,13 @@ changes from a wrapper taxonomy to a simpler rule:
 > natural type for that operation. No unwrapping, no universal wrappers.
 
 The section on result wrappers (`ScalarFieldResult`, `ListFieldResult`,
-`MutationResult`, `ResolveFieldResult`) would be removed. The error
+`MutationResult`, `LookupFieldResult`) would be removed. The error
 model section is unchanged.
 
 ## Open Questions
 
-1. Should `ResolveMatch` be considered a wrapper or a domain type?
-   It's inherent to the resolve operation's semantics (multiple versions
+1. Should `LookupMatch` be considered a wrapper or a domain type?
+   It's inherent to the lookup operation's semantics (multiple versions
    match), so it's a domain type — but worth noting it's the closest
    thing to a wrapper that survives.
 

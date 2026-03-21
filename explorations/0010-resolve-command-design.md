@@ -1,22 +1,22 @@
-# Exploration 0010: Resolve Command Design
+# Exploration 0010: Lookup Command Design
 
 **Status: Distilled into ADR-0008**
 
 ## Context
 
-The current resolve command tree (ADR-0004) returns multiple matching
-versions per query — `Vec<ResolveMatch<T>>`. This creates complex
+The current lookup command tree (ADR-0004) returns multiple matching
+versions per query — `Vec<LookupMatch<T>>`. This creates complex
 return types that don't project well to bindings, and the generic
-`ResolveMatch<T>` wrapper feels like the kind of speculative abstraction
+`LookupMatch<T>` wrapper feels like the kind of speculative abstraction
 we're moving away from (see exploration 0009).
 
 More fundamentally, most callers want information about one specific
 package, not a list of everything that matched. The local `project info`
-commands operate on one project — resolve should be symmetrical.
+commands operate on one project — lookup should be symmetrical.
 
 ## Decision Direction
 
-**Resolve always returns one package.** The IRI identifies the package,
+**Lookup always returns one package.** The IRI identifies the package,
 an optional version constraint narrows to a single version. The index
 resolves to the best match.
 
@@ -57,42 +57,42 @@ constraint. `PackageNotFound` if the IRI isn't in any index at all.
 Current (ADR-0004):
 
 ```
-resolve
+lookup
   show <IRI_OR_URL>
     [--relative-root <PATH>]
-    [resolve options]
+    [lookup options]
   info
-    name get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-    description get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-    version get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
+    name get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+    description get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+    version get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
     ...
   metadata
-    created get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
+    created get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
     ...
 ```
 
 Proposed:
 
 ```
-resolve
+lookup
   show <IRI> [<VERSION_CONSTRAINT>]
-    [resolve options]
+    [lookup options]
   info
-    name get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    description get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    version get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    license get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    website get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    maintainer list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    topic list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    usage list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+    name get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    description get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    version get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    license get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    website get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    maintainer list <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    topic list <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    usage list <IRI> [<VERSION_CONSTRAINT>] [lookup options]
   metadata
-    created get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    index list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    checksum list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    metamodel get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    includes-derived get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-    includes-implied get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+    created get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    index list <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    checksum list <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    metamodel get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    includes-derived get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+    includes-implied get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
 ```
 
 Changes:
@@ -103,25 +103,25 @@ Changes:
 
 ## Return Types
 
-With single-version resolution, every resolve command returns the same
+With single-version resolution, every lookup command returns the same
 shape as its local counterpart:
 
 | Command | Returns | Local equivalent |
 | ------- | ------- | ---------------- |
-| `resolve show` | `PackageSnapshot` | `project show` → `ProjectSnapshot` |
-| `resolve info name get` | `String` | `project info name get` → `String` |
-| `resolve info maintainer list` | `Vec<String>` | `project info maintainer list` → `Vec<String>` |
-| `resolve info version get` | `String` | `project info version get` → `String` |
-| `resolve metadata created get` | `Option<DateTime>` | `project metadata created get` → `Option<DateTime>` |
-| `resolve metadata checksum list` | `Vec<ChecksumEntry>` | `project metadata checksum list` → `Vec<ChecksumEntry>` |
+| `lookup show` | `PackageSnapshot` | `project show` → `ProjectSnapshot` |
+| `lookup info name get` | `String` | `project info name get` → `String` |
+| `lookup info maintainer list` | `Vec<String>` | `project info maintainer list` → `Vec<String>` |
+| `lookup info version get` | `String` | `project info version get` → `String` |
+| `lookup metadata created get` | `Option<DateTime>` | `project metadata created get` → `Option<DateTime>` |
+| `lookup metadata checksum list` | `Vec<ChecksumEntry>` | `project metadata checksum list` → `Vec<ChecksumEntry>` |
 
-No `ResolveMatch`, no `ResolveFieldResult`, no generics. The return
-type of `resolve info name get` is just `String`, same as
+No `LookupMatch`, no `LookupFieldResult`, no generics. The return
+type of `lookup info name get` is just `String`, same as
 `project info name get`.
 
 The only difference from local commands is the resolved version, which
 the caller already knows from the constraint they passed in. If they
-need the exact version that was resolved, `resolve info version get`
+need the exact version that was resolved, `lookup info version get`
 returns it.
 
 ## End-to-End Scenarios
@@ -129,17 +129,17 @@ returns it.
 ### Scenario 1: Rust — inspect a remote package
 
 ```rust
-let name: String = resolve::info::name::get(
+let name: String = lookup::info::name::get(
     "urn:example:sensors",
     None,  // latest stable
-    ResolveOptions::default(),
+    LookupOptions::default(),
 )?;
 println!("Package name: {name}");
 
-let version: String = resolve::info::version::get(
+let version: String = lookup::info::version::get(
     "urn:example:sensors",
     Some("^2.0"),
-    ResolveOptions::default(),
+    LookupOptions::default(),
 )?;
 println!("Resolved version: {version}");
 ```
@@ -149,10 +149,10 @@ No wrappers, no unwrapping. Just the value.
 ### Scenario 2: Java — check maintainers of a specific version
 
 ```java
-List<String> maintainers = client.resolve().info().maintainer().list(
+List<String> maintainers = client.lookup().info().maintainer().list(
     "urn:example:sensors",
     "=2.1.0",
-    new ResolveOptions()
+    new LookupOptions()
 );
 System.out.println("Maintainers: " + maintainers);
 ```
@@ -160,7 +160,7 @@ System.out.println("Maintainers: " + maintainers);
 ### Scenario 3: JS/WASM — show full package info
 
 ```ts
-const pkg = await sysand.resolve.show("urn:example:sensors", "^2.0");
+const pkg = await sysand.lookup.show("urn:example:sensors", "^2.0");
 console.log(`${pkg.name} @ ${pkg.version}`);
 console.log(`License: ${pkg.license}`);
 ```
@@ -169,7 +169,7 @@ console.log(`License: ${pkg.license}`);
 
 ```python
 try:
-    name = sysand.resolve.info.name.get("urn:nonexistent:package")
+    name = sysand.lookup.info.name.get("urn:nonexistent:package")
 except PackageNotFoundError as e:
     print(f"Not found: {e.context}")
 ```
@@ -178,11 +178,11 @@ except PackageNotFoundError as e:
 
 ```python
 # Latest stable
-version = sysand.resolve.info.version.get("urn:example:sensors")
+version = sysand.lookup.info.version.get("urn:example:sensors")
 print(version)  # "2.1.0"
 
 # Opting into pre-releases via constraint
-version = sysand.resolve.info.version.get(
+version = sysand.lookup.info.version.get(
     "urn:example:sensors", "^3.0.0-beta.1"
 )
 print(version)  # "3.0.0-beta.3"
@@ -190,7 +190,7 @@ print(version)  # "3.0.0-beta.3"
 
 ## Symmetry with Local Commands
 
-The resolve namespace mirrors the project namespace for read operations.
+The lookup namespace mirrors the project namespace for read operations.
 The calling pattern is almost identical:
 
 **Local:**
@@ -203,7 +203,7 @@ let name = project::info::name::get(&ctx)?;
 **Remote:**
 
 ```rust
-let name = resolve::info::name::get(iri, version_constraint, resolve_opts)?;
+let name = lookup::info::name::get(iri, version_constraint, lookup_opts)?;
 ```
 
 The first arg differs (context vs IRI) because the inputs are
@@ -216,7 +216,7 @@ With single-version resolution, there's no built-in way to ask "what
 versions exist?" This could be a separate command:
 
 ```
-resolve version list <IRI> [resolve options]
+lookup version list <IRI> [lookup options]
 ```
 
 Returns `Vec<String>` — just version strings, ordered by semver.
@@ -225,10 +225,10 @@ browsing the index. Worth adding but separable from this decision.
 
 ## Open Questions
 
-1. Is `resolve version list` needed now or can it be deferred?
-2. Should `resolve show` include the resolved version in its return
+1. Is `lookup version list` needed now or can it be deferred?
+2. Should `lookup show` include the resolved version in its return
    type (`PackageSnapshot` presumably has a version field), or should
-   callers use `resolve info version get` separately?
+   callers use `lookup info version get` separately?
 3. Does `--relative-root` still have a use case? It was for
-   URL-as-locator patterns. If resolve always takes an IRI, it may
+   URL-as-locator patterns. If lookup always takes an IRI, it may
    not be needed.

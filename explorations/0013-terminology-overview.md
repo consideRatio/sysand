@@ -23,7 +23,7 @@ explorations and discussions. This document pins them down.
   `.project.json` (ADR-0007).
 
 - **Version constraint** — Semver range expression. Example: `"^2.0"`,
-  `">=1.5, <3"`, `"=2.1.0"`. Used in usages and in resolve queries
+  `">=1.5, <3"`, `"=2.1.0"`. Used in usages and in lookup queries
   to narrow the version space.
 
 ## Project Structure
@@ -71,14 +71,14 @@ explorations and discussions. This document pins them down.
 
 - **Resolution** — The process of taking an IRI (+ optional version
   constraint) and finding a specific version from an index. The
-  public `resolve` API does this for a single package. The solver
+  public `lookup` API does this for a single package. The solver
   does this recursively for a dependency tree.
 
 - **Solver** — Internal machinery (PubGrub) that takes a set of
   usages and resolves a compatible set of versions across the entire
   dependency graph. Not part of the public API.
 
-- **Resolve options** — Shared option group: `--index`, 
+- **Lookup options** — Shared option group: `--index`, 
   `--default-index`, `--index-mode`, `--include-std`. Controls which
   indexes are queried.
 
@@ -130,6 +130,6 @@ explorations and discussions. This document pins them down.
 
 1. **Index vs registry** — Decided: use "index." Aligns with `--index`
    flag and all ADRs. "Registry" in the reference code should be renamed.
-2. **Resolve vs query vs lookup** — `resolve` is the namespace name
-   and implies finding the best match. "Query" and "lookup" are
-   informal. Should we be precise about when to use each?
+2. **Resolve vs lookup** — Decided: `lookup` is the public command
+   namespace for querying indexes. "Resolve" is reserved for the
+   internal solver concept (dependency resolution).

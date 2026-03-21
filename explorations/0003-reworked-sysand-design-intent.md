@@ -83,7 +83,7 @@ The reference codebase had these problems that the rework addresses:
 
 - **`info` was overloaded** — local project info and remote resolution shared one
   command with different flags changing the return shape. Split into `project ...`
-  (local) vs `resolve ...` (remote).
+  (local) vs `lookup ...` (remote).
 - **Negative flags** (`--no-lock`, `--no-sync`, `--no-deps`) — replaced with
   explicit mode enums (`--update`, `--dependency-mode`).
 - **Path options were ambiguous** — `--path` meant different things in different

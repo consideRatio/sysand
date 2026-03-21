@@ -58,14 +58,14 @@ You have a path on disk:
 
 | Command | Index | Direct URL | Local path |
 | ------- | ----- | ---------- | ---------- |
-| `resolve show` | Yes | ? | No |
-| `resolve info *` | Yes | ? | No |
+| `lookup show` | Yes | ? | No |
+| `lookup info *` | Yes | ? | No |
 | `usage add` | Yes | Yes | Yes |
 | `project clone` | Yes | Yes | Yes |
 | `env install` | Yes | Yes | Yes |
 | `env sync` | Yes | Yes | Yes (from lock) |
 
-`resolve` is the interesting case. Its purpose is querying package
+`lookup` is the interesting case. Its purpose is querying package
 metadata — "tell me about this package." For index lookups, that's
 clear: query the index, get metadata. For a direct URL or path, it
 would mean: fetch/read the package, extract its metadata. That's
@@ -137,9 +137,9 @@ The IRI is always the package identifier. The source kind and source
 value tell the system *how to get it*, overriding the default index
 lookup.
 
-## Implications for Resolve
+## Implications for Lookup
 
-If resolve only does index lookups, it's simple: `resolve` takes an
+If lookup only does index lookups, it's simple: `lookup` takes an
 IRI and optional version constraint, queries the index, returns
 metadata. No `--source-kind`, no `--relative-root`, no ambiguity.
 
@@ -157,7 +157,7 @@ But this overloads `project show` (which normally operates on a
 metadata from any source without requiring a local project.
 
 This is a design question worth deferring — the common case is index
-lookup, and that's what resolve should do first.
+lookup, and that's what lookup should do first.
 
 ## Implications for `--relative-root`
 

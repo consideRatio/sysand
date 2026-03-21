@@ -84,10 +84,10 @@ shared type in every surface:
 
 | Surface | Shape                             |
 | ------- | --------------------------------- |
-| Rust    | `ResolveOptions` struct           |
-| Java    | `ResolveOptions` builder          |
-| JS/WASM | `ResolveOptions` object/interface |
-| Python  | `ResolveOptions` dataclass        |
+| Rust    | `LookupOptions` struct           |
+| Java    | `LookupOptions` builder          |
+| JS/WASM | `LookupOptions` object/interface |
+| Python  | `LookupOptions` dataclass        |
 
 Paired flags (`--source-kind` + `--source`) follow the same rule — they
 become a single `SourceSpec` type.
@@ -154,7 +154,7 @@ usage::add(
     Some("1.0.0"),
     UsageAddOptions {
         update: UpdateMode::Sync,
-        resolve: ResolveOptions {
+        lookup: LookupOptions {
             index: vec!["https://registry.com".parse()?],
             ..Default::default()
         },
@@ -173,7 +173,7 @@ client.usage().add(
     "1.0.0",
     new UsageAddOptions()
         .update(UpdateMode.SYNC)
-        .resolve(new ResolveOptions()
+        .lookup(new LookupOptions()
             .index(List.of("https://registry.com")))
 );
 ```
@@ -184,7 +184,7 @@ client.usage().add(
 const ctx = new ProjectContext(".");
 await sysand.usage.add(ctx, "urn:example", "1.0.0", {
   update: "sync",
-  resolve: { index: ["https://registry.com"] },
+  lookup: { index: ["https://registry.com"] },
 });
 ```
 
@@ -197,7 +197,7 @@ sysand.usage.add(
     "urn:example",
     "1.0.0",
     update=UpdateMode.SYNC,
-    resolve=ResolveOptions(index=["https://registry.com"]),
+    lookup=LookupOptions(index=["https://registry.com"]),
 )
 ```
 

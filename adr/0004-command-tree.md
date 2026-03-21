@@ -33,7 +33,7 @@ This ADR defines the complete reworked command tree.
 | `lock`      | Lockfile operations                                            |
 | `env`       | Environment creation, sync, install/uninstall, listing         |
 | `workspace` | Workspace operations                                           |
-| `resolve`   | Remote package queries (read-only, no config)                  |
+| `lookup`    | Index package queries (read-only, no config)                   |
 
 ### Command Tree
 
@@ -55,7 +55,7 @@ sysand
       [--version <VERSION>]
       [--deps all|none]
       [--source-kind <KIND> --source <VALUE>]
-      [resolve options]
+      [lookup options]
 
     source
       add <PATH>...
@@ -138,7 +138,7 @@ sysand
       [--project <PATH>]
       [--source-kind <KIND> --source <VALUE>]
       [--update manifest|lock|sync]
-      [resolve options]
+      [lookup options]
     remove <IRI>
       [--project <PATH>]
     list
@@ -147,21 +147,21 @@ sysand
   lock
     update
       [--project <PATH>]
-      [resolve options]
+      [lookup options]
 
   env
     create [--env <PATH>]
     sync
       [--project <PATH>]
       [--env <PATH>]
-      [resolve options]
+      [lookup options]
     install <IRI> [<VERSION_REQ>]
       [--env <PATH>]
       [--source-kind <KIND> --source <VALUE>]
       [--allow-overwrite]
       [--allow-multiple]
       [--deps all|none]
-      [resolve options]
+      [lookup options]
     uninstall <IRI> [<VERSION_REQ>]
       [--env <PATH>]
     list [--env <PATH>]
@@ -178,28 +178,28 @@ sysand
       [--target <PATH>]
       [--compression stored|deflated|bzip2|zstd|xz|ppmd]
 
-  resolve
+  lookup
     show <IRI> [<VERSION_CONSTRAINT>]
-      [resolve options]
+      [lookup options]
     info
-      name get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      description get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      version get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      license get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      website get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      maintainer list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      topic list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      usage list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      name get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      description get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      version get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      license get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      website get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      maintainer list <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      topic list <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      usage list <IRI> [<VERSION_CONSTRAINT>] [lookup options]
     metadata
-      created get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      index list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      checksum list <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      metamodel get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      includes-derived get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
-      includes-implied get <IRI> [<VERSION_CONSTRAINT>] [resolve options]
+      created get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      index list <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      checksum list <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      metamodel get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      includes-derived get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
+      includes-implied get <IRI> [<VERSION_CONSTRAINT>] [lookup options]
 ```
 
-Where `[resolve options]` expands to:
+Where `[lookup options]` expands to:
 
 ```
 [--index <URL>]...
@@ -211,8 +211,8 @@ Where `[resolve options]` expands to:
 ### Key Design Decisions
 
 **Local vs remote split:** The current `info` command is split into `project`
-(local operations) and `resolve` (remote queries). They have different inputs,
-different return shapes, and different config behavior. `resolve` commands
+(local operations) and `lookup` (index queries). They have different inputs,
+different return shapes, and different config behavior. `lookup` commands
 don't accept `--config` — they use explicit `--index`/`--default-index` flags
 only.
 
@@ -245,7 +245,7 @@ workspace context.
 | `sources` → `project source list`                                         | Namespace grouping                      | 0002 |
 | `print-root` → `project locate`                                           | Namespace grouping; proper verb          | 0002, 0006 |
 | `sync` → `env sync`                                                       | Belongs under env                       | 0002 |
-| `info` → `project show` + `project info` + `project metadata` + `resolve` | Split local/remote; split info/metadata | 0002 |
+| `info` → `project show` + `project info` + `project metadata` + `lookup` | Split local/remote; split info/metadata | 0002 |
 | `info name --set` → `project info name set`                               | Verbs as subcommands                    | 0002 |
 | `build` auto-detect → `project build` / `workspace build`                 | Noun-verb grammar; explicit subcommands | 0002 |
 | `env` (no subcmd) → `env create`                                          | Explicit verb                           | 0002 |
@@ -275,6 +275,8 @@ workspace context.
   `workspace locate` added. (ADR-0006)
 - **2026-03-21**: `--allow-non-semver` removed from `project init`
   and `project info version set`. (ADR-0007)
-- **2026-03-21**: Resolve section rewritten — `<IRI_OR_URL>` replaced
+- **2026-03-21**: Resolve section rewritten as lookup — `<IRI_OR_URL>` replaced
   with `<IRI>`, `[<VERSION_CONSTRAINT>]` added, `--relative-root`
   removed. Single-version resolution. (ADR-0008)
+- **2026-03-21**: `resolve` namespace renamed to `lookup`. `[resolve
+  options]` renamed to `[lookup options]`.

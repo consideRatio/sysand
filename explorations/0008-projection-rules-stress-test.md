@@ -68,7 +68,7 @@ let result: MutationResult = usage::add(
     Some("1.0.0"),
     UsageAddOptions {
         update: UpdateMode::Sync,
-        resolve: ResolveOptions {
+        lookup: LookupOptions {
             index: vec!["https://my-registry.com".parse()?],
             ..Default::default()
         },
@@ -87,7 +87,7 @@ MutationResult result = client.usage().add(
     "1.0.0",
     new UsageAddOptions()
         .update(UpdateMode.SYNC)
-        .resolve(new ResolveOptions()
+        .lookup(new LookupOptions()
             .index(List.of("https://my-registry.com")))
 );
 ```
@@ -98,7 +98,7 @@ MutationResult result = client.usage().add(
 const ctx = new ProjectContext(".");
 const result = await sysand.usage.add(ctx, "urn:example", "1.0.0", {
   update: "sync",
-  resolve: { index: ["https://my-registry.com"] },
+  lookup: { index: ["https://my-registry.com"] },
 });
 ```
 
@@ -111,7 +111,7 @@ result = sysand.usage.add(
     "urn:example",
     "1.0.0",
     update=UpdateMode.SYNC,
-    resolve=ResolveOptions(index=["https://my-registry.com"]),
+    lookup=LookupOptions(index=["https://my-registry.com"]),
 )
 ```
 
@@ -162,20 +162,20 @@ Java but predictable.
 
 ---
 
-### 4. Remote query: `resolve info name get`
+### 4. Remote query: `lookup info name get`
 
 **CLI:**
 
 ```
-sysand resolve info name get urn:example --index https://my-registry.com
+sysand lookup info name get urn:example --index https://my-registry.com
 ```
 
 **Rust:**
 
 ```rust
-let result: ResolveFieldResult<String> = resolve::info::name::get(
+let result: LookupFieldResult<String> = lookup::info::name::get(
     "urn:example",
-    ResolveOptions {
+    LookupOptions {
         index: vec!["https://my-registry.com".parse()?],
         ..Default::default()
     },
@@ -185,16 +185,16 @@ let result: ResolveFieldResult<String> = resolve::info::name::get(
 **Java:**
 
 ```java
-ResolveFieldResult<String> result = client.resolve().info().name().get(
+LookupFieldResult<String> result = client.lookup().info().name().get(
     "urn:example",
-    new ResolveOptions().index(List.of("https://my-registry.com"))
+    new LookupOptions().index(List.of("https://my-registry.com"))
 );
 ```
 
 **JS/WASM:**
 
 ```ts
-const result = await sysand.resolve.info.name.get("urn:example", {
+const result = await sysand.lookup.info.name.get("urn:example", {
   index: ["https://my-registry.com"],
 });
 ```
@@ -202,16 +202,16 @@ const result = await sysand.resolve.info.name.get("urn:example", {
 **Python:**
 
 ```python
-result = sysand.resolve.info.name.get(
+result = sysand.lookup.info.name.get(
     "urn:example",
-    resolve=ResolveOptions(index=["https://my-registry.com"]),
+    lookup=LookupOptions(index=["https://my-registry.com"]),
 )
 ```
 
 ```
 
-**Observation:** No `ProjectContext` here — `resolve` commands are project-less.
-The first arg is always the IRI. `ResolveOptions` is the only options group.
+**Observation:** No `ProjectContext` here — `lookup` commands are project-less.
+The first arg is always the IRI. `LookupOptions` is the only options group.
 Clean.
 
 But: **Rust is async, Java/Python are sync.** The binding layer hides the
@@ -316,7 +316,7 @@ But which operations are async? From the command tree:
 - `lock update` — network
 - `env sync` — network
 - `env install` — network
-- All `resolve` commands — network
+- All `lookup` commands — network
 
 The binding layer must know which operations need a runtime. This isn't
 visible in the CLI or the binding API — it's an implementation detail the
@@ -338,6 +338,6 @@ them. The projection rule for paired options isn't explicitly stated.
 
 **Resolved:** No separate rule needed. This is just the smallest case of the
 existing shared options grouping rule. If `--index` + `--default-index` +
-`--index-mode` + `--include-std` become `ResolveOptions`, then `--source-kind`
+`--index-mode` + `--include-std` become `LookupOptions`, then `--source-kind`
 
 - `--source` becoming `SourceSpec` is obvious.

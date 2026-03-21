@@ -4,7 +4,7 @@
 
 ## Context
 
-ADR-0008 simplifies the public `resolve` API to single-version lookups.
+ADR-0008 simplifies the public `lookup` API to single-version lookups.
 But dependency resolution (triggered by `lock update`, `env sync`,
 `usage add --update lock|sync`) needs to explore many versions of many
 packages to find a compatible set. This exploration examines how the
@@ -55,7 +55,7 @@ PubGrub.
 - **Caching** — `resolve_candidates` caches results per IRI to avoid
   re-fetching during backtracking.
 
-### What the public resolve API needs
+### What the public lookup API needs
 
 Just one version. Look up an IRI, optionally constrain the version,
 return info about the best match.
@@ -66,7 +66,7 @@ The solver needs multi-version queries internally. The public API
 exposes single-version queries. These are fundamentally different
 operations:
 
-| | Public resolve | Internal solver |
+| | Public lookup | Internal solver |
 | --- | --- | --- |
 | Input | IRI + optional constraint | IRI (all versions) |
 | Output | One package's info | All candidates with full info |
@@ -76,17 +76,17 @@ operations:
 
 ## How This Should Be Structured
 
-### Option A: Private solver, public resolve is separate
+### Option A: Private solver, public lookup is separate
 
 The solver and its `ResolveRead` trait are private implementation
-details of the library. The public `resolve` namespace is a thin
+details of the library. The public `lookup` namespace is a thin
 layer that uses the same index client but presents single-version
 results.
 
 ```
 public API:
-  resolve::show(iri, constraint, opts) → PackageSnapshot
-  resolve::info::name::get(iri, constraint, opts) → String
+  lookup::show(iri, constraint, opts) → PackageSnapshot
+  lookup::info::name::get(iri, constraint, opts) → String
   ...
 
 internal (pub(crate) or private):
@@ -104,7 +104,7 @@ candidate list.
 
 Expose both levels publicly:
 
-- `resolve` namespace: user-facing, single-version (ADR-0008)
+- `lookup` namespace: user-facing, single-version (ADR-0008)
 - `index` namespace: lower-level, multi-version, for advanced
   consumers building custom solvers or tools
 
@@ -125,11 +125,11 @@ internal machinery. Exposing it publicly means stabilizing the
 caching strategy — all of which are implementation details that may
 change.
 
-The public `resolve` API and the solver share the same index client
+The public `lookup` API and the solver share the same index client
 code, but that's a shared dependency, not a shared API surface.
 
 If demand emerges for lower-level access (Option B or C), it can be
-added later without changing the public resolve API. The internal
+added later without changing the public lookup API. The internal
 structure supports this — `ResolveRead` is already a trait that
 different implementations can plug into.
 
@@ -138,7 +138,7 @@ different implementations can plug into.
 1. **`solve` module is `pub(crate)`** — not part of the public API
 2. **`ResolveRead` trait is internal** — the solver's abstraction
    over index access
-3. **Public `resolve` namespace** uses the same index client but
+3. **Public `lookup` namespace** uses the same index client but
    returns single-version results per ADR-0008
 4. **Index client code** (HTTP, protocol) is shared but the
    interface boundary is at the public API level, not at the
@@ -150,7 +150,7 @@ different implementations can plug into.
 1. Should the solver be a separate crate within the workspace for
    code organization, even if it's not publicly exposed?
 2. Does the index client need its own abstraction, separate from
-   `ResolveRead`, that both the public resolve API and the solver
+   `ResolveRead`, that both the public lookup API and the solver
    can use?
 3. The reference solver uses PubGrub with a custom `VersionSet`
    (`DiscreteHashSet` over indices rather than semver ranges).

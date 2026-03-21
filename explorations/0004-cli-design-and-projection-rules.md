@@ -46,9 +46,9 @@ If the CLI can operate on different resource kinds, split it into separate comma
 
 ```
 Good:  sysand project show      →  ProjectSnapshot
-       sysand resolve show      →  ResolveMatchesResult
+       sysand lookup show      →  LookupMatchesResult
 Bad:   sysand info --path .     →  ProjectSnapshot
-       sysand info --iri x      →  Vec<ResolveMatch>
+       sysand info --iri x      →  Vec<LookupMatch>
 ```
 
 ### Rule 3: Stable option names across all commands
@@ -163,16 +163,16 @@ The mapping is purely structural. No renaming, no special cases.
 
 ### Options grouping
 
-When multiple commands share the same set of options (e.g., resolve options:
+When multiple commands share the same set of options (e.g., lookup options:
 `--index`, `--default-index`, `--index-mode`, `--include-std`), they become a
 shared type in every surface:
 
 | Surface | Shape                                                       |
 | ------- | ----------------------------------------------------------- |
-| Rust    | `ResolveOptions` struct                                     |
-| Python  | `ResolveOptions` dataclass, passed as keyword arg           |
-| Java    | `ResolveOptions` builder, composed into per-command options |
-| JS/WASM | `ResolveOptions` object literal or interface                |
+| Rust    | `LookupOptions` struct                                     |
+| Python  | `LookupOptions` dataclass, passed as keyword arg           |
+| Java    | `LookupOptions` builder, composed into per-command options |
+| JS/WASM | `LookupOptions` object literal or interface                |
 
 ### Return types
 
@@ -181,7 +181,7 @@ shared type in every surface:
 | Mutation        | `MutationResult`        | `MutationResult`        | `MutationResult`        | `MutationResult`        |
 | Scalar query    | `ScalarFieldResult<T>`  | return `T` directly     | `ScalarFieldResult<T>`  | `T` directly            |
 | List query      | `ListFieldResult<T>`    | return `list[T]`        | `ListFieldResult<T>`    | `T[]`                   |
-| Resolve query   | `ResolveFieldResult<T>` | `ResolveFieldResult[T]` | `ResolveFieldResult<T>` | `ResolveFieldResult<T>` |
+| Resolve query   | `LookupFieldResult<T>` | `LookupFieldResult[T]` | `LookupFieldResult<T>` | `LookupFieldResult<T>` |
 
 Python and JS may unwrap thin wrappers for ergonomics. Rust and Java keep them
 for type clarity. This is the one place where surfaces may differ slightly —

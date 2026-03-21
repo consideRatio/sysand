@@ -81,14 +81,14 @@ Reworked:  sysand project source add [PATHS] --index-symbols on|off
 When multiple commands accept the same set of options, those options form
 a shared type in the library and bindings:
 
-**Resolve options** (`--index`, `--default-index`, `--index-mode`, `--include-std`):
+**Lookup options** (`--index`, `--default-index`, `--index-mode`, `--include-std`):
 
 | Surface | Type                                       |
 | ------- | ------------------------------------------ |
-| Rust    | `ResolveOptions` struct                    |
-| Java    | `ResolveOptions` builder                   |
-| JS/WASM | `ResolveOptions` object/interface          |
-| Python  | `ResolveOptions` dataclass or keyword args |
+| Rust    | `LookupOptions` struct                    |
+| Java    | `LookupOptions` builder                   |
+| JS/WASM | `LookupOptions` object/interface          |
+| Python  | `LookupOptions` dataclass or keyword args |
 
 This avoids repeating the same fields in every operation's input type.
 

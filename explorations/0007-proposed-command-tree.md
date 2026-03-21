@@ -40,7 +40,7 @@ sysand
       [--version <VERSION>]
       [--deps all|none]
       [--source-kind <KIND> --source <VALUE>]
-      [resolve options]
+      [lookup options]
 
     source
       add <PATH>...
@@ -118,7 +118,7 @@ sysand
       [--project <PATH>]
       [--source-kind <KIND> --source <VALUE>]
       [--update manifest|lock|sync]
-      [resolve options]
+      [lookup options]
     remove <IRI>
       [--project <PATH>]
     list
@@ -127,7 +127,7 @@ sysand
   lock
     update
       [--project <PATH>]
-      [resolve options]
+      [lookup options]
 
   env
     create
@@ -135,14 +135,14 @@ sysand
     sync
       [--project <PATH>]
       [--env <PATH>]
-      [resolve options]
+      [lookup options]
     install <IRI> [<VERSION_REQ>]
       [--env <PATH>]
       [--source-kind <KIND> --source <VALUE>]
       [--allow-overwrite]
       [--allow-multiple]
       [--deps all|none]
-      [resolve options]
+      [lookup options]
     uninstall <IRI> [<VERSION_REQ>]
       [--env <PATH>]
     list
@@ -163,29 +163,29 @@ sysand
       [--target <PATH>]
       [--compression stored|deflated|bzip2|zstd|xz|ppmd]
 
-  resolve
+  lookup
     show <IRI_OR_URL>
       [--relative-root <PATH>]
-      [resolve options]
+      [lookup options]
     info
-      name get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      description get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      version get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      license get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      website get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      maintainer list <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      topic list <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      usage list <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
+      name get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      description get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      version get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      license get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      website get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      maintainer list <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      topic list <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      usage list <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
     metadata
-      created get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      index list <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      checksum list <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      metamodel get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      includes-derived get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
-      includes-implied get <IRI_OR_URL> [--relative-root <PATH>] [resolve options]
+      created get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      index list <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      checksum list <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      metamodel get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      includes-derived get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
+      includes-implied get <IRI_OR_URL> [--relative-root <PATH>] [lookup options]
 ```
 
-Where `[resolve options]` expands to:
+Where `[lookup options]` expands to:
 
 ```
 [--index <URL>]...
@@ -204,7 +204,7 @@ Where `[resolve options]` expands to:
 | `sources` → `project source list`                                         | Namespace grouping                      | ADR-0002 |
 | `print-root` → `project root`                                             | Namespace grouping                      | ADR-0002 |
 | `sync` → `env sync`                                                       | Belongs under env                       | ADR-0002 |
-| `info` → `project show` + `project info` + `project metadata` + `resolve` | Split local/remote; split info/metadata | ADR-0002 |
+| `info` → `project show` + `project info` + `project metadata` + `lookup` | Split local/remote; split info/metadata | ADR-0002 |
 | `info name --set` → `project info name set`                               | Verbs as subcommands                    | ADR-0002 |
 | `build` auto-detect → `build project` / `build workspace`                 | Explicit subcommands                    | ADR-0002 |
 | `env` (no subcmd) → `env create`                                          | Explicit verb                           | ADR-0002 |
@@ -217,10 +217,10 @@ Where `[resolve options]` expands to:
 
 ## Open Questions
 
-1. ~~**`resolve` and config**~~ **Resolved**: `resolve` commands don't accept
+1. ~~**`lookup` and config**~~ **Resolved**: `lookup` commands don't accept
    `--config`. Everything they need (indexes) is expressible via explicit
    flags (`--index`, `--default-index`). No config fields exist that aren't
-   already covered by resolve option flags. If repetitive flag typing becomes
+   already covered by lookup option flags. If repetitive flag typing becomes
    a problem, that's solved by shell aliases or a future user-level config —
    not by shoehorning project config into a project-less context.
 
