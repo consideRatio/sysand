@@ -1,5 +1,5 @@
 - Formalize return types and error model — natural return types direction explored (0009), needs ADR update to drop wrapper taxonomy from ADR-0005
-- Explore resolve command design: single-version resolution direction explored (0010), blocked on IRI variant exploration
-- Explore IRI variants: index identifier vs direct download URL vs git repo — which are distinct source types, where does each belong (resolve, clone, install), and what does --relative-root mean for each
+- Explore resolve command design: single-version resolution direction explored (0010), index-only path is clear — non-index sources for resolve deferred pending source-kind question
+- Explore IRI variants: explored (0011), fundamental question parked — do --source-kind/--source belong on commands at all, or are indexes + config + workspaces sufficient?
 - Scaffold Rust workspace: crate structure, module layout mirroring command tree
 - Define JS/WASM projection rules in detail (async/Promise semantics, wasm-bindgen constraints)

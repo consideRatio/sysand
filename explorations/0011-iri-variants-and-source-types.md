@@ -218,6 +218,18 @@ sysand.usage.add(ctx, "urn:example:sensors", "^2.0",
 
 ## Open Questions
 
+0. **Fundamental: Should `--source-kind` and `--source` exist at all?**
+   The default case (index lookup) is simple and covers most users.
+   The override cases — local development, pre-publish testing, offline
+   use, git tracking — may be better served by other mechanisms:
+   workspaces handle local cross-project references, `env install` can
+   install from a path or KPAR, and config can map IRIs to alternative
+   sources. If source overrides don't belong on `usage add`, then the
+   manifest only tracks IRI + version constraint, and *how to fetch* is
+   always resolved through indexes and config. This simplifies the
+   command tree significantly but may leave real workflows unserved.
+   **Needs more thought before designing further.**
+
 1. Do we need `RemoteSrc` (remote source directory) and `RemoteApi`
    as source kinds? Or are these edge cases that can be deferred?
 2. Should `editable` be a source kind or a flag on `usage add`?
@@ -225,3 +237,8 @@ sysand.usage.add(ctx, "urn:example:sensors", "^2.0",
    arbitrary sources (paths, URLs, KPARs) without an index lookup?
 4. Git source: do we need to support branches, tags, or subdirectories?
    If so, how? Cargo uses `--branch`, `--tag`, `--rev` flags.
+5. Monorepo case: IRI-based identity means that pointing at a git repo
+   or directory containing multiple projects should work — the system
+   matches the IRI to the right `.project.json`. This eliminates the
+   need for `--source-path` or `--relative-root`. But this only matters
+   if source overrides survive question 0.
