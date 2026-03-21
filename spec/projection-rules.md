@@ -12,12 +12,12 @@ Sources: ADR-0005
 Every segment in the CLI command path becomes a namespace level.
 No renaming, no special cases.
 
-| CLI                            | Rust                         | Java                                   | JS/WASM                          | Python                           |
-| ------------------------------ | ---------------------------- | -------------------------------------- | -------------------------------- | -------------------------------- |
-| `sysand project init`          | `project::init()`            | `client.project().init()`              | `sysand.project.init()`          | `sysand.project.init()`          |
-| `sysand project info name set` | `project::info::name::set()` | `client.project().info().name().set()` | `sysand.project.info.name.set()` | `sysand.project.info.name.set()` |
-| `sysand env install`           | `env::install()`             | `client.env().install()`               | `sysand.env.install()`           | `sysand.env.install()`           |
-| `sysand usage add`             | `usage::add()`               | `client.usage().add()`                 | `sysand.usage.add()`             | `sysand.usage.add()`             |
+| CLI                         | Rust                     | Java                              | JS/WASM                       | Python                        |
+| --------------------------- | ------------------------ | --------------------------------- | ----------------------------- | ----------------------------- |
+| `sysand project init`       | `project::init()`        | `client.project().init()`         | `sysand.project.init()`       | `sysand.project.init()`       |
+| `sysand project source add` | `project::source::add()` | `client.project().source().add()` | `sysand.project.source.add()` | `sysand.project.source.add()` |
+| `sysand env install`        | `env::install()`         | `client.env().install()`          | `sysand.env.install()`        | `sysand.env.install()`        |
+| `sysand project usage add`  | `project::usage::add()`  | `client.project().usage().add()`  | `sysand.project.usage.add()`  | `sysand.project.usage.add()`  |
 
 If this structural mapping feels awkward for a command, the command is
 designed wrong.
@@ -50,12 +50,12 @@ surface, passed as the first argument.
 Related CLI options that appear together across multiple commands become
 a shared type:
 
-| Surface | Shape                            |
-| ------- | -------------------------------- |
-| Rust    | `LookupOptions` struct           |
-| Java    | `LookupOptions` builder          |
-| JS/WASM | `LookupOptions` object/interface |
-| Python  | `LookupOptions` dataclass        |
+| Surface | Shape                           |
+| ------- | ------------------------------- |
+| Rust    | `IndexOptions` struct           |
+| Java    | `IndexOptions` builder          |
+| JS/WASM | `IndexOptions` object/interface |
+| Python  | `IndexOptions` dataclass        |
 
 Paired flags (`--source-kind` + `--source`) become a single `SourceSpec`
 type.

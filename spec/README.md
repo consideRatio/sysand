@@ -16,7 +16,7 @@ the latest state.
 - `option-rules.md` — option naming, defaults, positive flags, semver requirement
 - `discovery-and-config.md` — locate, contexts, config loading
 - `error-model.md` — SysandError, ErrorCode enum
-- `version-resolution.md` — semver, lookup, version constraints
+- `version-resolution.md` — semver, version constraints
 - `dependency-resolution.md` — lock, sync, solver pipeline, lockfile contents
 
 ## Relationship to Other Directories

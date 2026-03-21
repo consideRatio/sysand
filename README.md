@@ -42,10 +42,10 @@ Read `adr/` for the full decisions. Summary:
 - **ADR-0003**: Option names are stable across commands (`--project` always
   means project root). No `--no-*` flags — use positive enums
   (`--update manifest|lock|sync`, `--deps all|none`). Shared option groups
-  become shared types (`LookupOptions`).
+  become shared types (`IndexOptions`).
 
-- **ADR-0004**: Complete command tree with 6 namespaces: `project`, `usage`,
-  `lock`, `env`, `workspace`, `lookup`. Every command has one return shape.
+- **ADR-0004**: Complete command tree with 4 namespaces: `project`,
+  `lock`, `env`, `workspace`. Every command has one return shape.
 
 - **ADR-0005**: Projection rules for all surfaces. Context objects
   (`ProjectContext`) are explicit everywhere. Every operation returns a typed
@@ -60,15 +60,20 @@ Read `adr/` for the full decisions. Summary:
   `--allow-non-semver` flag. Simplifies version resolution, constraint
   matching, and pre-release filtering.
 
-- **ADR-0008**: Lookup always returns one package. Takes an IRI and
-  optional version constraint, returns a single version. Return
-  types mirror local `project info`/`metadata` commands. Pre-release
-  inclusion controlled by the constraint string.
+- **ADR-0008**: Version constraint rules for index queries: latest
+  stable by default, range constraints, pre-release opt-in via
+  constraint string. Applied internally by the solver.
+
+- **ADR-0009**: Minimal public API. Field-level accessors (`project
+info`, `project metadata`) and index queries (`lookup`) removed —
+  users edit manifest files directly, index queries are internal.
+  `usage` moved under `project`. `LookupOptions` renamed to
+  `IndexOptions`.
 
 ## Terminology
 
 - **Usage** (not "dependency") — the KerML/SysML term for a project's
-  dependencies. The CLI namespace is `sysand usage add|remove|list`.
+  dependencies. The CLI commands are `sysand project usage add|remove|list`.
 - **Interchange project** — the unit of packaging (`.project.json` +
   `.meta.json` + source files).
 - **KPAR** — KerML Project Archive, a zip-based archive format.
@@ -77,12 +82,10 @@ Read `adr/` for the full decisions. Summary:
 ## CLI Command Namespaces
 
 ```
-sysand project ...    Local project lifecycle, sources, info, metadata, building
-sysand usage ...      Usage management (add/remove/list)
+sysand project ...    Local project lifecycle, sources, usages, building
 sysand lock ...       Lockfile operations
 sysand env ...        Environment creation, sync, install/uninstall
 sysand workspace ...  Workspace operations
-sysand lookup ...     Index package queries (read-only)
 ```
 
 See `adr/0004-command-tree.md` for the full tree.

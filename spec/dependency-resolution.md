@@ -90,16 +90,16 @@ doesn't need config or index access for already-locked dependencies.
 
 ## When Resolution Runs
 
-| Command                       | Locks | Syncs                         |
-| ----------------------------- | ----- | ----------------------------- |
-| `lock update`                 | Yes   | No                            |
-| `env sync`                    | No    | Yes                           |
-| `usage add --update manifest` | No    | No                            |
-| `usage add --update lock`     | Yes   | No                            |
-| `usage add --update sync`     | Yes   | Yes                           |
-| `env install`                 | No    | Installs one package directly |
+| Command                               | Locks | Syncs                         |
+| ------------------------------------- | ----- | ----------------------------- |
+| `lock update`                         | Yes   | No                            |
+| `env sync`                            | No    | Yes                           |
+| `project usage add --update manifest` | No    | No                            |
+| `project usage add --update lock`     | Yes   | No                            |
+| `project usage add --update sync`     | Yes   | Yes                           |
+| `env install`                         | No    | Installs one package directly |
 
-`usage add` with `--update manifest` only edits `.project.json`.
+`project usage add` with `--update manifest` only edits `.project.json`.
 With `--update lock`, it also re-runs the solver. With `--update sync`
 (the default), it re-runs the solver and syncs the environment.
 
@@ -125,7 +125,5 @@ private library internals (`pub(crate)`). The public API provides:
 
 - `lock update` — runs the solver, produces a lockfile
 - `env sync` — installs from the lockfile
-- `lookup` — single-version index queries for user inspection
-
-The solver's `ResolveRead` trait and `DependencyProvider` implementation
-are not part of the public API.
+  The solver's `ResolveRead` trait and `DependencyProvider` implementation
+  are not part of the public API.

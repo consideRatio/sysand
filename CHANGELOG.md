@@ -4,6 +4,23 @@ Decisions made and their outcomes, in reverse chronological order.
 
 ## 2026-03-21
 
+- **`project info`, `project metadata`, `project show`, and `lookup`
+  removed** — Not worth the CLI surface area. Users edit `.project.json`
+  and `.meta.json` directly. Index queries remain internal to the solver.
+  `[lookup options]` renamed to `[index options]`, `LookupOptions` type
+  renamed to `IndexOptions`.
+
+- **`usage` moved under `project`** — Usages live in `.project.json`,
+  same as sources. Now `project usage add/remove` for consistency.
+
+- **`project usage list`, `project source list` removed** — Thin
+  wrappers over reading `.project.json` and the env directory. `env
+list` kept for inspecting actual installed state.
+
+- **`--include-std` separated from `IndexOptions`** — Controls
+  standard library inclusion regardless of source type, not an index
+  concern. Standalone flag on all resolution commands.
+
 - **spec/ directory populated** — Living specification created with 6
   files: command-tree, projection-rules, option-rules,
   discovery-and-config, error-model, version-resolution. These are
