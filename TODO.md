@@ -1,4 +1,5 @@
 - Formalize return types and error model — natural return types direction explored (0009), needs ADR update to drop wrapper taxonomy from ADR-0005
-- Explore resolve command design: single vs multiple version returns, query shapes, how version constraints affect the API (split from exploration 0009)
+- Explore resolve command design: single-version resolution direction explored (0010), blocked on IRI variant exploration
+- Explore IRI variants: index identifier vs direct download URL vs git repo — which are distinct source types, where does each belong (resolve, clone, install), and what does --relative-root mean for each
 - Scaffold Rust workspace: crate structure, module layout mirroring command tree
 - Define JS/WASM projection rules in detail (async/Promise semantics, wasm-bindgen constraints)
