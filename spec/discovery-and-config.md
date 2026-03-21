@@ -84,3 +84,52 @@ Given a workspace path:
 
 - Implicit locate from CWD when `--project`/`--workspace` is omitted
 - Terminal concerns: color, prompting, log level, output format
+
+## Source Overrides and Resolution
+
+### Manifest vs Config Separation
+
+The manifest (`.project.json`) stores *what* a project depends on:
+IRI + optional version constraint. It never stores source information.
+
+The config (`sysand.toml`) stores *where* to get things: source
+overrides that map IRIs to specific locations, and index URLs.
+
+The lockfile (`sysand-lock.toml`) stores *exactly what* was resolved:
+the specific version and source that was actually used.
+
+### How Source Overrides Work
+
+Config can override how a specific IRI is resolved:
+
+```toml
+[[project]]
+identifiers = ["urn:example:sensors"]
+sources = [{ src_path = "../libs/sensors" }]
+```
+
+During resolution (lock update, env sync), the resolver checks config
+overrides before querying indexes. If config maps an IRI to a local
+path, git repo, or KPAR, that source is used instead of the index.
+
+### Only the Root Project's Config Applies
+
+The resolver is built once from the root project's `sysand.toml`.
+That same resolver is used for the entire dependency tree.
+Dependencies' own `sysand.toml` files are not read during resolution.
+
+This means source overrides from the root project apply globally —
+if the root config says `urn:example:sensors` lives at a local path,
+that override applies even when resolving transitive usages of
+`sensors` from other packages.
+
+This is intentional: the person running `lock update` controls where
+everything comes from.
+
+### Resolver Priority
+
+During resolution, sources are checked in this order:
+
+1. Config overrides (from root project's `sysand.toml`)
+2. Standard library IRIs (built-in)
+3. Standard resolver: local environment, HTTP indexes, file, git
