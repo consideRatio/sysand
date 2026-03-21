@@ -1,5 +1,6 @@
 - Formalize return types and error model — natural return types direction explored (0009), needs ADR update to drop wrapper taxonomy from ADR-0005
 - Explore resolve command design: single-version resolution direction explored (0010), index-only path is clear — non-index sources for resolve deferred pending source-kind question
 - Explore IRI variants: explored (0011), fundamental question parked — do --source-kind/--source belong on commands at all, or are indexes + config + workspaces sufficient?
+- Subfolder specification: when a source (git repo, local directory, KPAR) contains multiple projects, how does the user specify which subfolder? Open design space includes: encoding in the IRI, a --source-path flag, auto-discovery by matching IRI to .project.json identifiers, or something else. Relevant for git monorepos, multi-project directories, and --relative-root's original use case (now dropped from resolve).
 - Scaffold Rust workspace: crate structure, module layout mirroring command tree
 - Define JS/WASM projection rules in detail (async/Promise semantics, wasm-bindgen constraints)
