@@ -59,10 +59,10 @@ pub enum ErrorCode {
     EnvCorrupted,
     EnvConflict,
 
-    // Lookup / network
+    // Index / network
     IndexUnreachable,
-    PackageNotFound,
-    VersionNotFound,
+    ProjectNotInIndex,
+    VersionNotInIndex,
 
     // Build
     BuildFailed,

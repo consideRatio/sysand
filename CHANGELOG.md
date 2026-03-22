@@ -2,6 +2,31 @@
 
 Decisions made and their outcomes, in reverse chronological order.
 
+## 2026-03-22
+
+- **"package" → "project" in error codes** — `PackageNotFound` renamed
+  to `ProjectNotInIndex`, `VersionNotFound` renamed to
+  `VersionNotInIndex`. User-facing text uses "project" consistently
+  per KerML terminology. "Package index" remains acceptable as a
+  concept name.
+
+- **spec/public-api.md added** — Complete public API across all five
+  surfaces (CLI, Rust, Java, JS/WASM, Python). Types, enums, options
+  structs, function signatures, CLI grammar. `command-tree.md` removed
+  (absorbed into public-api). `discovery-and-config.md` trimmed to
+  behavioral content only.
+
+- **`env install` and `env uninstall` take `ProjectContext`** — Both
+  need config for source overrides and index URLs, consistent with
+  the reference implementation.
+
+- **`locate` goes through client in Java** — No static methods.
+  `client.project().locate()` and `client.workspace().locate()`,
+  consistent with all other operations.
+
+- **`project clone` has no `ProjectContext`** — Bootstrapping operation.
+  Uses `IndexOptions` from arguments directly, no config file.
+
 ## 2026-03-21
 
 - **`project info`, `project metadata`, `project show`, and `lookup`

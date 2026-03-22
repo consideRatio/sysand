@@ -23,8 +23,8 @@ string. No flags.
 
 ## Error Cases
 
-- `PackageNotFound` — IRI not found in any index
-- `VersionNotFound` — IRI exists but no version satisfies the
+- `ProjectNotInIndex` — IRI not found in any index
+- `VersionNotInIndex` — IRI exists but no version satisfies the
   constraint
 
 ## Internal Resolution
