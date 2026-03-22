@@ -1,5 +1,9 @@
 # Discovery and Config
 
+How projects and workspaces are found, and how configuration is loaded.
+For type definitions (`ProjectContext`, `WorkspaceContext`, `ConfigMode`),
+see `public-api.md`.
+
 Sources: ADR-0001, ADR-0006
 
 ## Locate
@@ -21,27 +25,6 @@ let ctx = ProjectContext::new(path);
 Implicit locate (using CWD when `--project`/`--workspace` is omitted)
 is CLI-only behavior.
 
-## ProjectContext
-
-Shared input for all project operations. Carries a path and config mode.
-
-```rust
-pub struct ProjectContext {
-    pub path: Utf8PathBuf,
-    pub config: ConfigMode,  // defaults to Auto
-}
-```
-
-## WorkspaceContext
-
-Shared input for workspace operations. Just a path.
-
-```rust
-pub struct WorkspaceContext {
-    pub path: Utf8PathBuf,
-}
-```
-
 ## Config
 
 One config file: `<project>/sysand.toml`. No user-level config, no
@@ -52,24 +35,8 @@ Config controls:
 - Package index URLs (with default/non-default distinction and priority)
 - Project source overrides (mapping IRIs to specific sources)
 
-Loading is automatic but overridable:
-
-```rust
-pub enum ConfigMode {
-    Auto,              // Load sysand.toml from project root (default)
-    File(Utf8PathBuf), // Use this specific config file
-    None,              // Don't load any config
-}
-```
-
-CLI mapping:
-
-| CLI               | ConfigMode   |
-| ----------------- | ------------ |
-| (no flag)         | `Auto`       |
-| `--config auto`   | `Auto`       |
-| `--config none`   | `None`       |
-| `--config <PATH>` | `File(path)` |
+Loading is automatic but overridable via `ConfigMode`
+(see `public-api.md`).
 
 ## What the Library Reads
 

@@ -36,8 +36,8 @@ Symbol control: `--index-symbols on|off`
 ## Shared Option Groups
 
 When multiple commands accept the same set of options, those options
-form a shared type in the library and bindings. Example: `LookupOptions`
-groups `--index`, `--default-index`, `--index-mode`, `--include-std`.
+form a shared type in the library and bindings. Example: `IndexOptions`
+groups `--index`, `--default-index`, `--index-mode`.
 
 ## Defaults
 

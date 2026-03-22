@@ -88,7 +88,7 @@ sysand env ...        Environment creation, sync, install/uninstall
 sysand workspace ...  Workspace operations
 ```
 
-See `adr/0004-command-tree.md` for the full tree.
+See `spec/public-api.md` for the full API across all surfaces.
 
 ## Conventions
 

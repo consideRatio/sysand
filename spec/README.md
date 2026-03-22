@@ -11,11 +11,11 @@ the latest state.
 
 ## Files
 
+- `public-api.md` — complete public API: types, functions, options, CLI grammar across all five surfaces
 - `data-model.md` — file schemas: .project.json, .meta.json, sysand.toml, lockfile, workspace
-- `command-tree.md` — complete CLI command tree with grammar and namespaces
-- `projection-rules.md` — how CLI maps to Rust, Java, JS/WASM, Python
+- `projection-rules.md` — mechanical rules for projecting CLI to Rust, Java, JS/WASM, Python
 - `option-rules.md` — option naming, defaults, positive flags, semver requirement
-- `discovery-and-config.md` — locate, contexts, config loading
+- `discovery-and-config.md` — locate behavior, config loading, source overrides, resolver priority
 - `error-model.md` — SysandError, ErrorCode enum
 - `version-resolution.md` — semver, version constraints
 - `dependency-resolution.md` — lock, sync, solver pipeline, lockfile contents

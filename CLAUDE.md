@@ -44,7 +44,7 @@ One question at a time, not a list of 10.
 
 **`spec/`** is the living specification. It reflects the current state
 of all cumulative decisions. When you want to know "what is the command
-tree right now?", you read `spec/command-tree.md`. When a new decision
+tree right now?", you read `spec/public-api.md`. When a new decision
 is made, the relevant spec file is updated. Spec files are the single
 source of truth for the current design.
 
