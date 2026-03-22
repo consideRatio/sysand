@@ -11,6 +11,7 @@ the latest state.
 
 ## Files
 
+- `data-model.md` — file schemas: .project.json, .meta.json, sysand.toml, lockfile, workspace
 - `command-tree.md` — complete CLI command tree with grammar and namespaces
 - `projection-rules.md` — how CLI maps to Rust, Java, JS/WASM, Python
 - `option-rules.md` — option naming, defaults, positive flags, semver requirement
