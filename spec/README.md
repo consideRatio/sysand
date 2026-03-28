@@ -19,6 +19,7 @@ the latest state.
 - `error-model.md` — SysandError, ErrorCode enum
 - `version-resolution.md` — semver, version constraints
 - `dependency-resolution.md` — lock, sync, solver pipeline, lockfile contents
+- `binding-architecture.md` — facade pattern, storage backends, binding tools, maintenance strategy
 
 ## Relationship to Other Directories
 

@@ -18,9 +18,9 @@ Five binding surfaces, one source of truth:
 
 1. **Rust CLI** — thin clap adapter over the Rust library
 2. **Rust library** — canonical implementation
-3. **Java bindings** — via JNI/UniFFI
+3. **Java bindings** — via JNI
 4. **JS/WASM bindings** — via wasm-bindgen
-5. **Python bindings** — via PyO3/UniFFI
+5. **Python bindings** — via PyO3
 
 The CLI command tree maps structurally to all binding surfaces. If you know
 the CLI, you can predict the Rust module path, Java method chain, JS namespace,
@@ -69,6 +69,17 @@ info`, `project metadata`) and index queries (`lookup`) removed —
   users edit manifest files directly, index queries are internal.
   `usage` moved under `project`. `LookupOptions` renamed to
   `IndexOptions`.
+
+- **ADR-0010**: Facade in the Rust core, generic over storage. Each
+  binding surface provides only project construction
+  (`LocalSrcProject` for filesystem, `ProjectLocalBrowserStorage` for
+  browser). Existing binding tools kept (JNI, PyO3, wasm-bindgen) —
+  UniFFI rejected. Each command wrapper is ~5-10 lines.
+
+- **ADR-0011**: All binding command wrappers are AI-generated from the
+  facade by applying projection rules. Generation rules live in
+  `CLAUDE.md`. Storage backends (JS/WASM only) require manual
+  engineering. No build-time code generation tooling.
 
 ## Terminology
 

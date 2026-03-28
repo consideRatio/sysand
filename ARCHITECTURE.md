@@ -58,17 +58,17 @@ calls this repeatedly to discover candidates.
 
 **Implementations:**
 
-| Resolver | Purpose |
-| --- | --- |
-| `FileResolver` | Local filesystem (`file://` URLs) |
-| `EnvResolver<Env>` | Wraps a `ReadEnvironment` (local cache or HTTP index) |
-| `GitResolver` | Git repository cloning |
-| `HTTPResolverAsync` | Direct HTTP(S) fetch |
-| `StandardResolver` | Production composition: file → local env → remote → index |
-| `PriorityResolver` | Config overrides: tries high-priority resolver first |
-| `SequentialResolver` | Tries multiple resolvers in order |
-| `CombinedResolver` | Orchestrates file → remote → local → index |
-| `MemoryResolver` | In-memory (tests) |
+| Resolver             | Purpose                                                   |
+| -------------------- | --------------------------------------------------------- |
+| `FileResolver`       | Local filesystem (`file://` URLs)                         |
+| `EnvResolver<Env>`   | Wraps a `ReadEnvironment` (local cache or HTTP index)     |
+| `GitResolver`        | Git repository cloning                                    |
+| `HTTPResolverAsync`  | Direct HTTP(S) fetch                                      |
+| `StandardResolver`   | Production composition: file → local env → remote → index |
+| `PriorityResolver`   | Config overrides: tries high-priority resolver first      |
+| `SequentialResolver` | Tries multiple resolvers in order                         |
+| `CombinedResolver`   | Orchestrates file → remote → local → index                |
+| `MemoryResolver`     | In-memory (tests)                                         |
 
 **StandardResolver composition:**
 
@@ -103,15 +103,15 @@ trait ProjectMut: ProjectRead {
 
 **Implementations:**
 
-| Type | Source |
-| --- | --- |
-| `LocalSrcProject` | Local directory with `.project.json` + `.meta.json` |
-| `LocalKParProject` | Local `.kpar` ZIP archive |
-| `EditableProject<P>` | Wraps another project for live editable tracking |
-| `ReqwestKparDownloadedProject` | HTTP → download → unzip KPAR |
-| `ReqwestSrcProjectAsync` | HTTP → fetch project/meta JSON |
-| `GixDownloadedProject` | Git clone → extract project |
-| `AnyProject` | Enum dispatch over all the above |
+| Type                           | Source                                              |
+| ------------------------------ | --------------------------------------------------- |
+| `LocalSrcProject`              | Local directory with `.project.json` + `.meta.json` |
+| `LocalKParProject`             | Local `.kpar` ZIP archive                           |
+| `EditableProject<P>`           | Wraps another project for live editable tracking    |
+| `ReqwestKparDownloadedProject` | HTTP → download → unzip KPAR                        |
+| `ReqwestSrcProjectAsync`       | HTTP → fetch project/meta JSON                      |
+| `GixDownloadedProject`         | Git clone → extract project                         |
+| `AnyProject`                   | Enum dispatch over all the above                    |
 
 ### ReadEnvironment — project storage
 
@@ -129,11 +129,11 @@ trait WriteEnvironment {
 
 **Implementations:**
 
-| Type | Purpose |
-| --- | --- |
-| `LocalDirectoryEnvironment` | `sysand_env/` on disk |
-| `HTTPEnvironmentAsync` | HTTP index (e.g., beta.sysand.org) |
-| `MemoryEnvironment` | In-memory (tests) |
+| Type                        | Purpose                            |
+| --------------------------- | ---------------------------------- |
+| `LocalDirectoryEnvironment` | `sysand_env/` on disk              |
+| `HTTPEnvironmentAsync`      | HTTP index (e.g., beta.sysand.org) |
+| `MemoryEnvironment`         | In-memory (tests)                  |
 
 **Local environment storage layout:**
 
