@@ -119,16 +119,16 @@ TypeScript `.d.ts` definitions provide compile-time type safety.
 
 ### Type mapping
 
-| Rust type        | JS/WASM type                    |
-| ---------------- | ------------------------------- |
-| `String`         | `string`                        |
-| `Option<String>` | `string \| undefined`           |
-| `Vec<String>`    | `string[]`                      |
-| `bool`           | `boolean`                       |
-| `()`             | `void` (Promise resolves)       |
-| Options struct   | plain object (`XxxOptions`)     |
-| Domain struct    | plain object                    |
-| Enum             | `"kebab-case"` string union     |
+| Rust type        | JS/WASM type                                     |
+| ---------------- | ------------------------------------------------ |
+| `String`         | `string`                                         |
+| `Option<String>` | `string \| undefined`                            |
+| `Vec<String>`    | `string[]`                                       |
+| `bool`           | `boolean`                                        |
+| `()`             | `void` (Promise resolves)                        |
+| Options struct   | plain object (`XxxOptions`)                      |
+| Domain struct    | plain object                                     |
+| Enum             | `"kebab-case"` string union                      |
 | `SysandError`    | thrown object with `code`, `message`, `context?` |
 
 ### Constraints

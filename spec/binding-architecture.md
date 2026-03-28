@@ -69,10 +69,10 @@ irreducible platform-specific code. It implements core traits
 browser `localStorage`. Changes to these traits may require
 corresponding manual changes in the storage backend.
 
-| Layer           | Mechanical? | Surfaces              | Maintained by           |
-| --------------- | ----------- | --------------------- | ----------------------- |
-| Command wrapper | Yes         | Java, Python, JS/WASM | AI-generated            |
-| Storage backend | No          | JS/WASM only          | Manual engineering      |
+| Layer           | Mechanical? | Surfaces              | Maintained by      |
+| --------------- | ----------- | --------------------- | ------------------ |
+| Command wrapper | Yes         | Java, Python, JS/WASM | AI-generated       |
+| Storage backend | No          | JS/WASM only          | Manual engineering |
 
 ## Maintenance
 
