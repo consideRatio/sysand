@@ -2,6 +2,21 @@
 
 Decisions made and their outcomes, in reverse chronological order.
 
+## 2026-03-28
+
+- **ADR-0011: Binding maintenance** — All binding surfaces (Java,
+  Python, JS/WASM) are AI-generated from the facade using projection
+  rules in CLAUDE.md. No codegen tooling. Only the JS/WASM storage
+  backend (~390 lines) requires manual engineering; command wrappers
+  are mechanical across all surfaces.
+
+- **ADR-0010: Binding strategy** — Facade in the Rust core, generic
+  over storage (`impl ProjectMut`/`impl ProjectRead`). Each surface
+  constructs its storage backend and calls the shared facade. Keep
+  existing tools (JNI, PyO3, wasm-bindgen) — with the facade, per-
+  command binding code drops to ~5–10 lines, making UniFFI
+  unnecessary. Distilled from exploration 0014.
+
 ## 2026-03-22
 
 - **"package" → "project" in error codes** — `PackageNotFound` renamed
