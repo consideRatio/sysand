@@ -4,8 +4,6 @@ The complete public API across all five binding surfaces. Types are
 organized by category; functions are listed once with their signatures
 derived mechanically from the projection rules (`projection-rules.md`).
 
-Sources: ADR-0004, ADR-0005, ADR-0009, all spec files
-
 ## Context Objects
 
 ### ProjectContext
@@ -404,8 +402,6 @@ sysand [GLOBAL_OPTIONS] <namespace> [<resource>...] <verb> [OPERANDS...] [OPTION
 - Required data is positional operands
 - Optional behavior is named options
 
-Sources: ADR-0002
-
 ### Global Options
 
 ```
@@ -431,3 +427,39 @@ These exist only in the CLI surface:
 - Implicit CWD discovery when `--project`/`--workspace` is omitted
 - Exit codes (0 success, non-zero error)
 - Color and terminal formatting
+
+## Rationale
+
+**Why noun-verb grammar.** The grammar
+`sysand <namespace> [<resource>] <verb>` ensures every command path
+segment maps structurally to a namespace in all binding surfaces. Verbs
+as subcommands (not flags) guarantee one command = one return shape,
+which means bindings can be generated mechanically. The alternative —
+flags that change behavior (e.g., `--set` vs `--get` on the same
+command) — would require per-flag return type logic in every surface.
+
+**Why field-level accessors were removed.** An earlier design had
+`project info name get`, `project info name set`, `project metadata`
+commands, and a `project show` aggregate. These created ~20 commands
+that were thin wrappers over reading/writing `.project.json` fields.
+Across four binding surfaces with testing and documentation, the
+maintenance cost was high for low value — users can edit the JSON
+file directly. Removing them cut the API surface significantly.
+
+**Why lookup was removed.** The original design had a `lookup`
+namespace for querying package indexes (name, version, usages, etc.).
+This created ~50 commands across all query fields. In practice, index
+queries are only needed internally by the solver during dependency
+resolution. Exposing them as public API would mean maintaining those
+~50 commands across 4 binding surfaces with testing and docs, for a
+use case that doesn't justify the cost. The version constraint rules
+still apply — they're used internally by the solver.
+
+**Why thin list commands were cut.** `project usage list` and
+`project source list` were wrappers over reading `.project.json`.
+`env list` was kept because it inspects actual installed state in
+`sysand_env/`, which isn't a simple file read.
+
+**Why usage moved under project.** Usages live in `.project.json`,
+same as sources. `project usage add` is structurally parallel to
+`project source add`, and both operate on the same manifest file.

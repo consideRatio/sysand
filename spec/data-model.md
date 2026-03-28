@@ -46,7 +46,7 @@ Defined by KerML clause 10.3.
 | `name`        | string       | Yes      | Human-readable label, not unique |
 | `publisher`   | string       | No       |                                  |
 | `description` | string       | No       |                                  |
-| `version`     | string       | Yes      | Must be valid semver (ADR-0007)  |
+| `version`     | string       | Yes      | Must be valid semver             |
 | `license`     | string       | No       | SPDX expression                  |
 | `maintainer`  | string[]     | No       | Defaults to `[]`                 |
 | `website`     | string (IRI) | No       |                                  |

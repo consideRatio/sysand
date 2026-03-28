@@ -4,8 +4,6 @@ How the Rust core exposes functionality to Java, JS/WASM, and Python.
 Covers the facade pattern, storage backends, and per-surface binding
 tools.
 
-Sources: ADR-0010, ADR-0011
-
 ## Facade
 
 The core library exports facade functions that accept trait objects
@@ -73,7 +71,7 @@ corresponding manual changes in the storage backend.
 
 | Layer           | Mechanical? | Surfaces              | Maintained by           |
 | --------------- | ----------- | --------------------- | ----------------------- |
-| Command wrapper | Yes         | Java, Python, JS/WASM | AI-generated (ADR-0011) |
+| Command wrapper | Yes         | Java, Python, JS/WASM | AI-generated            |
 | Storage backend | No          | JS/WASM only          | Manual engineering      |
 
 ## Maintenance
@@ -83,5 +81,37 @@ AI-generated from the facade by applying the projection rules. When a
 facade function is added or changed, the bindings across all three
 surfaces are updated in the same change.
 
-The binding generation rules live in `CLAUDE.md` — see ADR-0011 for
-rationale.
+The binding generation rules live in `CLAUDE.md`.
+
+## Rationale
+
+**Why UniFFI was rejected.** UniFFI auto-generates bindings from a
+single definition, eliminating JNI boilerplate and giving Kotlin/Swift
+for free. However, the facade pattern already reduces per-command
+binding code to ~5-10 lines — the main pain point UniFFI solves
+(verbose JNI) is already addressed. UniFFI also lacks generics across
+FFI, has limited async support, requires a build-time code generation
+step, and gives less control over language-specific types and
+namespace mapping.
+
+**Why facade + thin wrappers.** The facade centralizes command logic
+and error mapping in one place. Each binding surface only needs to:
+construct storage, call the facade function, convert the error. This
+pattern makes each command wrapper mechanical and uniform — the same
+~5-10 line structure everywhere.
+
+**Why AI-generated bindings over build-time codegen.** With the facade
+and projection rules, binding wrappers are fully mechanical — there
+is no design judgment involved. Rather than building and maintaining
+codegen tooling, the projection rules in `CLAUDE.md` are sufficient
+for Claude to generate correct wrappers. This avoids a build
+dependency, keeps the binding code readable and editable, and makes
+it trivial to update all surfaces when a facade function changes.
+
+**Why storage backends are manual.** The JS/WASM storage backend
+(~390 lines) implements core traits (`ProjectRead`, `ProjectMut`,
+`ReadEnvironment`, `WriteEnvironment`) on browser `localStorage`.
+This is irreducible platform-specific code — it bridges two different
+storage models. Changes to core traits may require corresponding
+manual changes here. This is fundamentally different from command
+wrappers, which are mechanical.

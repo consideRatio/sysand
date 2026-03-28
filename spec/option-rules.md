@@ -1,7 +1,5 @@
 # Option Design Rules
 
-Sources: ADR-0003, ADR-0007
-
 ## Stable Option Names
 
 The same option name means the same thing in every command where it
@@ -58,3 +56,19 @@ Defaults are the same in every surface.
 All project versions must be valid semver (Semantic Versioning 2.0.0).
 There is no `--allow-non-semver` flag. Sysand errors if a non-semver
 version is encountered anywhere.
+
+## Rationale
+
+**Why no `--no-*` flags.** Negative flags create double-negation
+confusion (`--no-verify=false`). Positive enums are unambiguous and
+project cleanly to all binding surfaces — each variant maps to an
+enum value, not a boolean with inverted semantics.
+
+**Why semver is mandatory.** Non-semver version strings break the
+solver's ability to order versions, evaluate range constraints, and
+filter pre-releases. An `--allow-non-semver` flag was originally part
+of the design but was removed because it would require every
+constraint-evaluation code path to handle unorderable strings as a
+special case. Rejecting non-semver at every entry point (init,
+manifest read, index query) keeps the version resolution pipeline
+simple and correct.

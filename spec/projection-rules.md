@@ -5,8 +5,6 @@ The test: given any CLI command, a developer can write the Rust
 function, Java call, JS call, and Python call without looking anything
 up — just by applying these rules.
 
-Sources: ADR-0005
-
 ## Command Path → Namespaces
 
 Every segment in the CLI command path becomes a namespace level.
@@ -102,3 +100,23 @@ classes.
 | Java    | sync by default; binding layer manages async runtime internally                       |
 | JS/WASM | everything returns `Promise`                                                          |
 | Python  | sync by default; binding layer manages async runtime internally                       |
+
+## Rationale
+
+**Why mechanical projection.** If projecting a CLI command to binding
+surfaces requires design judgment, the command is designed wrong. The
+mechanical test — "can a developer write the Rust, Java, JS, and Python
+call without looking anything up?" — ensures the API is consistent and
+that bindings can be generated rather than handcrafted per surface.
+
+**Why natural return types instead of wrappers.** An earlier design
+used a four-wrapper taxonomy (`ScalarFieldResult`, `ListFieldResult`,
+`MutationResult`, `LookupFieldResult`) for forward compatibility.
+These wrappers added ceremony without earning their keep: every call
+site had to unwrap, generics complicated binding projections (especially
+JNI), and the "future extensibility" benefit was speculative.
+Replacing wrappers with natural types (`String`, `Vec<T>`, `()`,
+domain structs) makes return types project trivially to all surfaces
+and eliminates unnecessary unwrapping. If a return type needs to grow
+pre-1.0, a targeted breaking change is cheaper than permanent wrapper
+overhead.

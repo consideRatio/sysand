@@ -127,3 +127,28 @@ private library internals (`pub(crate)`). The public API provides:
 - `env sync` — installs from the lockfile
   The solver's `ResolveRead` trait and `DependencyProvider` implementation
   are not part of the public API.
+
+## Rationale
+
+**Why PubGrub.** PubGrub provides conflict-driven learning with clear
+error explanations when dependency trees are unsatisfiable. It is the
+same algorithm used by Dart's pub and Swift Package Manager. The
+alternative (a simpler greedy resolver) would handle the common case
+but produce poor error messages on conflicts.
+
+**Why the solver is internal.** The solver needs all versions of every
+package it considers — a fundamentally different query pattern from
+what public API users need (one specific version). Exposing the solver
+would mean stabilizing `ResolveRead`, `DependencyProvider`, and the
+multi-version index query interface. These are implementation details
+that should be free to change as the resolver evolves. The public API
+provides `lock update` (runs the solver) and `env sync` (installs
+from the lockfile) — the solver's internals are encapsulated behind
+these operations.
+
+**Why a three-stage pipeline.** Separating lock update, lockfile, and
+env sync gives users control over when network access happens and when
+the filesystem changes. `lock update` can run without installing
+anything; `env sync` can run without re-resolving. The lockfile is the
+stable interface between the two stages — deterministic, committable,
+and independent of the resolver implementation.

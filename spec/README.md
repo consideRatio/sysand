@@ -1,13 +1,11 @@
 # Specification
 
-This directory is the **living specification** for sysand. It reflects
-the cumulative current state of all design decisions.
+This directory is the **living specification** for sysand. Each file
+reflects the current state of its topic, including a Rationale section
+that captures _why_ the design is what it is.
 
-When you want to know "how does X work right now?", look here.
-
-Files in this directory are updated when new ADRs are accepted. Unlike
-ADRs and explorations, these files are mutable — they always reflect
-the latest state.
+When you want to know "how does X work right now?" or "why was it
+designed this way?", look here.
 
 ## Files
 
@@ -20,9 +18,3 @@ the latest state.
 - `version-resolution.md` — semver, version constraints
 - `dependency-resolution.md` — lock, sync, solver pipeline, lockfile contents
 - `binding-architecture.md` — facade pattern, storage backends, binding tools, maintenance strategy
-
-## Relationship to Other Directories
-
-- **`spec/`** (here) — what the design _is_ right now
-- **`adr/`** — _why_ each decision was made (immutable, historical)
-- **`explorations/`** — _how_ we arrived at decisions (immutable, historical)

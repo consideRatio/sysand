@@ -4,8 +4,6 @@ How projects and workspaces are found, and how configuration is loaded.
 For type definitions (`ProjectContext`, `WorkspaceContext`, `ConfigMode`),
 see `public-api.md`.
 
-Sources: ADR-0001, ADR-0006
-
 ## Locate
 
 The library provides `project::locate(path)` and
@@ -103,3 +101,25 @@ During resolution, sources are checked in this order:
 1. Config overrides (from root project's `sysand.toml`)
 2. Standard library IRIs (built-in)
 3. Standard resolver: local environment, HTTP indexes, file, git
+
+## Rationale
+
+**Why locate is a library operation.** The original design placed all
+discovery in the CLI. In practice, library and binding users face the
+same problem — given a path inside a project, find the root. Forcing
+every consumer to reimplement upward traversal is unnecessary
+duplication. Locate was promoted to the library, but no library
+operation calls it implicitly — the caller decides when traversal
+happens. This preserves the predictability guarantee.
+
+**Why config is project-level only.** One file, one location, no
+merging. This avoids the complexity of layered config resolution
+(user-level, workspace-level, project-level) that causes surprises in
+other tools. The person running a command controls where everything
+comes from. User-level config (auth, personal indexes) can be added
+later as a separate layer without changing this decision.
+
+**Why discovery from CWD is CLI-only.** The library API is predictable:
+explicit paths in, no hidden state. Implicit CWD discovery is a
+terminal convenience that doesn't translate to library and binding
+contexts where the caller knows their project path.

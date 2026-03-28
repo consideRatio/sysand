@@ -4,6 +4,11 @@ Decisions made and their outcomes, in reverse chronological order.
 
 ## 2026-03-28
 
+- **Documentation consolidated** — ADRs and explorations folded into
+  spec files with Rationale sections. `adr/` and `explorations/`
+  directories removed. Spec is now the single source of truth for
+  both _what_ and _why_.
+
 - **ADR-0011: Binding maintenance** — All binding surfaces (Java,
   Python, JS/WASM) are AI-generated from the facade using projection
   rules in CLAUDE.md. No codegen tooling. Only the JS/WASM storage

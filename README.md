@@ -8,7 +8,7 @@ for JavaScript. Manages interchange projects defined by the KerML spec
 
 This is a **rework** of an existing codebase. The reference implementation
 lives in `reference/`. We are designing the reworked version from first
-principles, guided by ADRs and explorations.
+principles.
 
 No implementation code exists yet — only design documents.
 
@@ -26,68 +26,36 @@ The CLI command tree maps structurally to all binding surfaces. If you know
 the CLI, you can predict the Rust module path, Java method chain, JS namespace,
 and Python module path.
 
-## Key Design Decisions (ADRs)
+## Key Design Decisions
 
-Read `adr/` for the full decisions. Summary:
+Each `spec/` file includes a Rationale section explaining why the design
+is what it is — rejected alternatives, tradeoffs, and constraints. Key
+decisions:
 
-- **ADR-0001**: The library takes explicit paths via `ProjectContext` and
-  `WorkspaceContext`. Config (`sysand.toml`) is project-level only, loaded
-  automatically, overridable via `ConfigMode` (`--config auto|none|<PATH>`).
-  Implicit discovery from CWD is CLI-only (see ADR-0006 for `locate`).
-
-- **ADR-0002**: CLI follows noun-verb grammar:
-  `sysand <namespace> [<resource>...] <verb> [OPERANDS] [OPTIONS]`.
-  Command path segments map directly to namespaces in all surfaces.
-
-- **ADR-0003**: Option names are stable across commands (`--project` always
-  means project root). No `--no-*` flags — use positive enums
-  (`--update manifest|lock|sync`, `--deps all|none`). Shared option groups
-  become shared types (`IndexOptions`).
-
-- **ADR-0004**: Complete command tree with 4 namespaces: `project`,
-  `lock`, `env`, `workspace`. Every command has one return shape.
-
-- **ADR-0005**: Projection rules for all surfaces. Context objects
-  (`ProjectContext`) are explicit everywhere. Every operation returns a typed
-  result object (no unwrapping). Errors use a shared `ErrorCode` enum.
-
-- **ADR-0006**: `project::locate` and `workspace::locate` are library
-  operations that walk up from a path to find the project or workspace root.
-  Returns a path, not a context — the caller constructs their own context.
-  Implicit locate from CWD remains CLI-only.
-
-- **ADR-0007**: Semver is required for all project versions. No
-  `--allow-non-semver` flag. Simplifies version resolution, constraint
-  matching, and pre-release filtering.
-
-- **ADR-0008**: Version constraint rules for index queries: latest
-  stable by default, range constraints, pre-release opt-in via
-  constraint string. Applied internally by the solver.
-
-- **ADR-0009**: Minimal public API. Field-level accessors (`project
-info`, `project metadata`) and index queries (`lookup`) removed —
-  users edit manifest files directly, index queries are internal.
-  `usage` moved under `project`. `LookupOptions` renamed to
-  `IndexOptions`.
-
-- **ADR-0010**: Facade in the Rust core, generic over storage. Each
-  binding surface provides only project construction
-  (`LocalSrcProject` for filesystem, `ProjectLocalBrowserStorage` for
-  browser). Existing binding tools kept (JNI, PyO3, wasm-bindgen) —
-  UniFFI rejected. Each command wrapper is ~5-10 lines.
-
-- **ADR-0011**: All binding command wrappers are AI-generated from the
-  facade by applying projection rules. Generation rules live in
-  `CLAUDE.md`. Storage backends (JS/WASM only) require manual
-  engineering. No build-time code generation tooling.
+- Explicit paths via `ProjectContext` / `WorkspaceContext`; config is
+  project-level only; implicit CWD discovery is CLI-only
+- Noun-verb CLI grammar where command path segments map directly to
+  namespaces in all binding surfaces
+- Stable option names, no `--no-*` flags, semver required
+- Minimal API: field-level accessors and index queries removed; users
+  edit manifests directly, index queries are internal to the solver
+- Facade pattern in Rust core, generic over storage; binding command
+  wrappers are AI-generated from the facade using projection rules
+- PubGrub solver is internal; three-stage pipeline (lock, lockfile,
+  env sync)
 
 ## Terminology
 
 - **Usage** (not "dependency") — the KerML/SysML term for a project's
-  dependencies. The CLI commands are `sysand project usage add|remove|list`.
-- **Interchange project** — the unit of packaging (`.project.json` +
-  `.meta.json` + source files).
+  dependencies. The CLI commands are `sysand project usage add|remove`.
+- **Interchange project** (not "package") — the unit of packaging
+  (`.project.json` + `.meta.json` + source files).
+- **IRI** — unique identity of a project (e.g., `urn:kpar:sensors`). A
+  project can have multiple IRIs. Name is a human-readable label, not
+  unique, not used for resolution.
 - **KPAR** — KerML Project Archive, a zip-based archive format.
+- **Index** (not "registry") — a package index queried by IRI during
+  dependency resolution.
 - **Environment** — local `sysand_env/` directory where usages are installed.
 
 ## CLI Command Namespaces
@@ -126,20 +94,8 @@ wrapper types.
 ## Directory Structure
 
 ```
-spec/           Living specification — current state of all decisions
-adr/            Architectural Decision Records (numbered, immutable)
-explorations/   Working exploration documents (numbered, with status)
+spec/           Living specification with rationale — single source of truth
 reference/      Reference implementation (existing codebase, read-only)
 TODO.md         Open work items
 CHANGELOG.md    Completed decisions and their dates
 ```
-
-## Working Style
-
-We use an explore-and-distill workflow:
-
-1. Explore topics broadly, capture findings in `explorations/NNNN-*.md`
-2. Iterate through discussion, resolving open questions
-3. Distill into ADRs in `adr/NNNN-*.md` when decisions crystallize
-
-Explorations are cheap working memory. ADRs are commitments.

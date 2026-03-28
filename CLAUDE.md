@@ -5,8 +5,10 @@ See `README.md` for project overview, architecture, and design decisions.
 ## Terminology
 
 - **Usage** (not "dependency") — the KerML/SysML term for project dependencies
-- **Interchange project** — the unit of packaging
+- **Interchange project** (not "package") — the unit of packaging
+- **IRI** — unique project identity (e.g., `urn:kpar:sensors`); not the same as name
 - **KPAR** — KerML Project Archive
+- **Index** (not "registry") — package index queried by IRI
 
 ## Conventions
 
@@ -15,14 +17,12 @@ See `README.md` for project overview, architecture, and design decisions.
 - Every operation returns `Result<T, SysandError>` where `T` is the natural type
 - No `--no-*` flags — use positive enums
 - Option names are stable across commands (`--project` always means project root)
-- Semver is required for all project versions (ADR-0007)
+- Semver is required for all project versions
 
 ## Directory Structure
 
 ```
-spec/           Living specification — the current state of all decisions
-adr/            Architectural Decision Records (numbered, immutable)
-explorations/   Working exploration documents (numbered, immutable once done)
+spec/           Living specification with rationale — single source of truth
 reference/      Reference implementation (existing codebase, read-only)
 TODO.md         Open work items only
 CHANGELOG.md    Decisions made and their dates
@@ -33,8 +33,6 @@ CHANGELOG.md    Decisions made and their dates
 When a facade function is added or changed, update the Java, Python,
 and JS/WASM command wrappers by applying these rules mechanically.
 See `spec/binding-architecture.md` for the full architecture.
-
-Sources: ADR-0010, ADR-0011
 
 ### Pattern
 
@@ -94,65 +92,16 @@ Facade module path maps to binding namespace:
 
 ## Working Style
 
-We use an explore → decide → specify workflow:
+`spec/` is the single source of truth for the current design. Each
+spec file includes a Rationale section explaining _why_ — rejected
+alternatives, tradeoffs, and constraints.
 
-1. **Explore** — investigate topics broadly in `explorations/NNNN-*.md`
-2. **Decide** — when a decision crystallizes, record it in `adr/NNNN-*.md`
-3. **Specify** — update the relevant `spec/` file(s) to reflect the
-   cumulative current state
+When a design decision changes, update the relevant spec file(s)
+directly — both the _what_ and the _why_. Update `CLAUDE.md` if the
+decision changes conventions, binding rules, or terminology.
 
 Ask clarifying questions rather than assuming. Deliberate on naming.
 One question at a time, not a list of 10.
-
-### Updating spec after a new ADR
-
-When a new ADR is accepted, always update the spec to reflect it:
-
-1. **Identify affected spec files.** Read the ADR's decisions and
-   determine which `spec/` files they touch. Check the "Applies" and
-   "Supersedes" fields.
-2. **Update each affected spec file.** Reflect the cumulative state —
-   the spec should read as the current truth, not reference the ADR.
-   Add the ADR number to the file's "Sources" line.
-3. **Create new spec files if needed.** If the ADR covers a topic not
-   yet in `spec/`, create a new file and add it to `spec/README.md`.
-4. **Remove superseded content.** If the ADR removes or replaces
-   something, delete it from the spec. Don't leave commented-out or
-   "removed by ADR-NNNN" markers.
-5. **Update README.md ADR summary.** Add a bullet to the "Key Design
-   Decisions (ADRs)" section summarizing the new ADR. Also fix any
-   statements in the README that the ADR supersedes.
-6. **Update CLAUDE.md if needed.** If the ADR changes conventions,
-   binding rules, or terminology, update the relevant section here.
-7. **Move the TODO item to CHANGELOG.md** with the date and outcome.
-
-### Three layers, three purposes
-
-**`spec/`** is the living specification. It reflects the current state
-of all cumulative decisions. When you want to know "what is the command
-tree right now?", you read `spec/public-api.md`. When a new decision
-is made, the relevant spec file is updated. Spec files are the single
-source of truth for the current design.
-
-**`adr/`** records are immutable. Each ADR captures a decision, its
-context, and its reasoning at a specific point in time. ADRs are never
-edited after acceptance — they are historical artifacts. If a later
-decision supersedes an earlier one, the later ADR notes what it
-supersedes, but the earlier ADR is not modified. The spec files reflect
-the cumulative effect.
-
-**`explorations/`** are immutable once they reach a terminal status.
-They capture working-out and analysis that led to decisions. They may
-contain ideas that were rejected — that's valuable context.
-
-### Exploration lifecycle
-
-Every exploration has a status line at the top (after the title):
-
-- `Status: Open` — actively being worked on
-- `Status: Parked` — has unresolved questions, not actively progressing
-- `Status: Distilled into ADR-NNNN` — decisions captured, exploration is historical
-- `Status: Superseded by NNNN-*` — replaced by a later exploration
 
 ### Scenarios first
 
