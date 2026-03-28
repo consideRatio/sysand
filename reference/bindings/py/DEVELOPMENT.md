@@ -1,0 +1,74 @@
+# Python bindings
+
+## Setup
+
+Requirements:
+
+- Rust version given in `rust-version` in [Cargo.toml](../../Cargo.toml) or later
+- [uv](https://docs.astral.sh/uv/)
+
+The main part of the python bindings are written in Rust but some of the
+tests are written in Python so it can be a good idea configure your editor for
+Python development as well.
+
+### VS Code
+
+If using VS Code (or other compatible editor like e.g. Codium or Cursor) we
+recommended the official [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
+extension from Microsoft. This will also install the Pylance, Python Debugger
+and Python Environments extensions.
+
+If your editor is having problems finding imports even after installing all
+dependencies (see below), you can try to go into the settings of the Python
+extension and check the `Use Environments Extension` option.
+
+## Building and running tests
+
+First, set up a Python venv:
+
+```bash
+uv venv
+source .venv/bin/activate # or e.g. .venv/bin/activate.fish depending on your shell
+```
+
+Rust/"native" tests use PyO3, which does not work well within a Python venv.
+It is therefore recommended to use the supplied script to run all ("native"
+and pytest) tests:
+
+```sh
+./scripts/run_tests.sh
+```
+
+Alternatively, to build and run Python tests:
+
+```sh
+uv run maturin develop
+uv run pytest
+```
+
+Rust/"native" tests must be run without the `extension-module` feature:
+
+```sh
+cargo test --no-default-features
+```
+
+If this is run inside a venv and does not work, look in `scripts/run_tests.sh` for fixes.
+
+## Formatting and linting
+
+Format Rust and Python code and run linters for both:
+
+```sh
+./scripts/run_chores.sh
+```
+
+## Changing Python version
+
+Python version used by default for venvs is specified in `.python-version`.
+If you change the version there, you should run
+
+```sh
+cargo clean -p pyo3-build-config
+```
+
+to ensure that no references to previously used Python version remain in build cache.

@@ -3,6 +3,10 @@
 #
 # Config reference: https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file
 #
+# Common tasks
+#
+# - Check latest stable version: rustup check
+#
 [toolchain]
 channel = "1.94"
 components = [ "rustfmt", "clippy" ]

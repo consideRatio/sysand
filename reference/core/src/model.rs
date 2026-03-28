@@ -6,6 +6,8 @@ use std::{clone::Clone, collections::HashSet, fmt::Display, hash::Hash};
 #[allow(deprecated)] // will change when `sha2` 0.11 is released
 use digest::{generic_array::GenericArray, typenum};
 use indexmap::IndexMap;
+#[cfg(feature = "python")]
+use pyo3::{FromPyObject, IntoPyObject, pyclass};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use typed_path::{Utf8UnixPath, Utf8UnixPathBuf};
@@ -20,6 +22,7 @@ pub const KNOWN_METAMODELS: [&str; 2] = [
 ];
 
 #[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Hash, Debug)]
+#[cfg_attr(feature = "python", derive(FromPyObject, IntoPyObject))]
 #[serde(rename_all = "camelCase")]
 pub struct InterchangeProjectUsageG<Iri, VersionReq> {
     pub resource: Iri, // TODO: We should have a fallback for invalid IRIs
@@ -78,6 +81,7 @@ impl TryFrom<InterchangeProjectUsageRaw> for InterchangeProjectUsage {
 }
 
 #[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "python", derive(FromPyObject, IntoPyObject))]
 #[serde(rename_all = "camelCase")]
 pub struct InterchangeProjectInfoG<Iri, Version, VersionReq> {
     pub name: String,
@@ -217,6 +221,7 @@ impl TryFrom<InterchangeProjectInfoRaw> for InterchangeProjectInfo {
 // TODO: why is SHA512 missing? Also SHA256 vs SHA-384
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(try_from = "String", into = "&str")]
+#[cfg_attr(feature = "python", pyclass(eq, eq_int, from_py_object))]
 pub enum KerMlChecksumAlg {
     /// No checksum. Non-standard, must not be used in published
     /// versions of a project.
@@ -357,6 +362,7 @@ impl KerMlChecksumAlg {
 }
 
 #[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "python", derive(FromPyObject, IntoPyObject))]
 #[serde(rename_all = "camelCase")]
 pub struct InterchangeProjectChecksum {
     // TODO: use Vec<u8> or Box<[u8]> and store raw hash bytes
@@ -365,6 +371,7 @@ pub struct InterchangeProjectChecksum {
 }
 
 #[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "python", derive(FromPyObject, IntoPyObject))]
 #[serde(rename_all = "camelCase")]
 pub struct InterchangeProjectChecksumRaw {
     pub value: String,
@@ -372,6 +379,7 @@ pub struct InterchangeProjectChecksumRaw {
 }
 
 #[derive(Eq, Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "python", derive(FromPyObject, IntoPyObject))]
 #[serde(rename_all = "camelCase")]
 pub struct InterchangeProjectMetadataG<Iri, Path: Eq + Hash, DateTime, IPC> {
     pub index: IndexMap<String, Path>,
