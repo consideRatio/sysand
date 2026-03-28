@@ -4,6 +4,11 @@ Decisions made and their outcomes, in reverse chronological order.
 
 ## 2026-03-28
 
+- **JS/WASM projection rules defined** — Plain objects everywhere (no
+  wasm-bindgen classes), conversion via `serde-wasm-bindgen`, all
+  functions return `Promise`. Avoids manual `.free()` memory management.
+  TypeScript `.d.ts` for type safety.
+
 - **Documentation consolidated** — ADRs and explorations folded into
   spec files with Rationale sections. `adr/` and `explorations/`
   directories removed. Spec is now the single source of truth for

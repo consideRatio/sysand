@@ -101,6 +101,46 @@ classes.
 | JS/WASM | everything returns `Promise`                                                          |
 | Python  | sync by default; binding layer manages async runtime internally                       |
 
+## JS/WASM Details
+
+### Plain objects everywhere
+
+All types crossing the WASM boundary are plain JavaScript objects, not
+classes. This includes context objects, options structs, and return
+types. Conversion uses `serde-wasm-bindgen`: inputs are deserialized
+from `JsValue`, outputs are serialized to `JsValue`.
+
+No wasm-bindgen `#[wasm_bindgen]` classes are exposed to users. This
+avoids the memory management burden — wasm-bindgen classes hold Rust
+memory and must be `.free()`d manually, which is error-prone for
+short-lived values like return types and options.
+
+TypeScript `.d.ts` definitions provide compile-time type safety.
+
+### Type mapping
+
+| Rust type        | JS/WASM type                    |
+| ---------------- | ------------------------------- |
+| `String`         | `string`                        |
+| `Option<String>` | `string \| undefined`           |
+| `Vec<String>`    | `string[]`                      |
+| `bool`           | `boolean`                       |
+| `()`             | `void` (Promise resolves)       |
+| Options struct   | plain object (`XxxOptions`)     |
+| Domain struct    | plain object                    |
+| Enum             | `"kebab-case"` string union     |
+| `SysandError`    | thrown object with `code`, `message`, `context?` |
+
+### Constraints
+
+- **No overloading.** wasm-bindgen cannot export two functions with
+  the same JS name. Each facade function maps to one export.
+- **No generics across FFI.** Already handled by the facade — the
+  binding calls a concrete facade function, not a generic one.
+- **All functions return `Promise`.** The binding layer runs the Rust
+  async runtime internally. From the JS caller's perspective, every
+  call is `await sysand.project.build(ctx, opts)`.
+
 ## Rationale
 
 **Why mechanical projection.** If projecting a CLI command to binding

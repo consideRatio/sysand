@@ -51,11 +51,11 @@ Every binding follows: construct storage, call facade, convert error.
 
 | Rust type         | Java (JNI)                                        | Python (PyO3)    | JS/WASM (wasm-bindgen) |
 | ----------------- | ------------------------------------------------- | ---------------- | ---------------------- |
-| `&str` / `String` | `JString` → `env.get_string_required()`           | direct `String`  | direct `String`        |
-| `Option<String>`  | `@Nullable` → null check                          | `Option<String>` | `Option<String>`       |
-| `Vec<T>`          | `JObject` array extraction                        | `Vec<T>`         | `Vec<T>` / `JsValue`   |
-| `bool`            | `jboolean`                                        | `bool`           | `bool`                 |
-| Options struct    | `JObject` → `XxxOptions::from_jobject(env, &obj)` | kwargs           | object fields          |
+| `&str` / `String` | `JString` → `env.get_string_required()`           | direct `String`  | `string` via serde     |
+| `Option<String>`  | `@Nullable` → null check                          | `Option<String>` | `string \| undefined`  |
+| `Vec<T>`          | `JObject` array extraction                        | `Vec<T>`         | `T[]` via serde        |
+| `bool`            | `jboolean`                                        | `bool`           | `boolean`              |
+| Options struct    | `JObject` → `XxxOptions::from_jobject(env, &obj)` | kwargs           | plain object via serde |
 
 ### Error Mapping
 
