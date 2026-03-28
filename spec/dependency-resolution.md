@@ -34,7 +34,7 @@ exact versions. Produces `sysand-lock.toml`.
 **Process:**
 
 1. Collect all direct usages from `.project.json`
-2. Build a resolver from `sysand.toml` (config overrides > stdlib > standard resolver)
+2. Build a resolver chain from `sysand.toml` (see Resolution Priority below)
 3. Run the PubGrub solver, which iteratively:
    - Picks a package to resolve (fewest candidates first)
    - Queries the resolver for all available versions of that package
@@ -117,6 +117,28 @@ explanation of which constraints conflict.
 Additionally, the solver detects symbol export collisions — if two
 resolved projects export the same symbol name, the lock fails with
 a `NameCollision` error.
+
+## Resolution Priority
+
+When the solver needs to locate a project by IRI, sources are tried in
+this order:
+
+1. **Config source overrides** — if `sysand.toml` contains a
+   `[[project]]` entry whose `identifiers` match the IRI, the listed
+   sources are used directly. No further tiers are consulted.
+2. **Local file sources** — `file://` URIs and local paths referenced
+   by the project.
+3. **Local environment cache** — projects already installed in
+   `sysand_env/` with a matching checksum are reused without
+   re-fetching.
+4. **Remote sources** — HTTP(S) URLs and Git repositories.
+5. **Package indexes** — index servers listed in `sysand.toml` (or the
+   default index if none are configured). Non-default indexes are
+   queried before default indexes.
+
+The first tier that returns a valid project (one with both
+`.project.json` and `.meta.json`) wins. If no tier resolves the IRI,
+the solver reports a `ProjectNotInIndex` error.
 
 ## The Solver is Internal
 

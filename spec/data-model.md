@@ -164,7 +164,7 @@ The resolved dependency graph. Produced by `lock update`. Consumed by
 `env sync`. Should be committed to version control.
 
 ```toml
-lock_version = "1"
+lock_version = "0.3"
 
 [[project]]
 name = "comm-protocols"
@@ -229,9 +229,25 @@ Lists member projects in a workspace.
       "path": "drivers",
       "iris": ["urn:example:drivers"]
     }
-  ]
+  ],
+  "meta": {
+    "metamodel": "https://www.omg.org/spec/SysML/20250201"
+  }
 }
 ```
+
+### Workspace fields
+
+| Field           | Type              | Required | Notes                                    |
+| --------------- | ----------------- | -------- | ---------------------------------------- |
+| `projects`      | WorkspaceProject[] | Yes     | Member projects                          |
+| `meta`          | WorkspaceMeta     | No       | Workspace-level metadata                 |
+
+### WorkspaceMeta
+
+| Field       | Type         | Required | Notes                            |
+| ----------- | ------------ | -------- | -------------------------------- |
+| `metamodel` | string (IRI) | No       | Default metamodel for all members |
 
 ### Workspace project entry
 
