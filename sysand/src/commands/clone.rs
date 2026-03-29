@@ -176,7 +176,7 @@ fn obtain_project<Policy: HTTPAuthentication>(
     let ResolutionOptions {
         index,
         default_index,
-        no_index,
+        index_mode,
         include_std,
     } = resolution_opts;
     if let Some(existing_project) = &ctx.current_project {
@@ -195,7 +195,7 @@ fn obtain_project<Policy: HTTPAuthentication>(
             existing_workspace.root_path()
         );
     }
-    let index_urls = if no_index {
+    let index_urls = if index_mode == "none" {
         None
     } else {
         Some(config.index_urls(index, vec![DEFAULT_INDEX_URL.to_string()], default_index)?)

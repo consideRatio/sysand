@@ -75,11 +75,11 @@ pub fn command_add<Policy: HTTPAuthentication>(
         let ResolutionOptions {
             index,
             default_index,
-            no_index,
+            index_mode,
             include_std: _,
         } = resolution_opts.clone();
 
-        let index_urls = if no_index {
+        let index_urls = if index_mode == "none" {
             None
         } else {
             Some(config.index_urls(index, vec![DEFAULT_INDEX_URL.to_string()], default_index)?)

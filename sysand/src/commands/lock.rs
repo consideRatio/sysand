@@ -115,13 +115,13 @@ pub fn create_resolver<P: AsRef<Utf8Path>, R: AsRef<Utf8Path>, Policy: HTTPAuthe
     let ResolutionOptions {
         index,
         default_index,
-        no_index,
+        index_mode,
         include_std: _,
     } = resolution_opts;
 
     let local_env_path = path.as_ref().join(DEFAULT_ENV_NAME);
 
-    let index_urls = if no_index {
+    let index_urls = if index_mode == "none" {
         None
     } else {
         Some(config.index_urls(index, vec![DEFAULT_INDEX_URL.to_string()], default_index)?)

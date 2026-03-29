@@ -95,9 +95,9 @@ pub enum Command {
         /// version according to SemVer 2.0
         #[arg(long, short = 'V', verbatim_doc_comment)]
         version: Option<String>,
-        /// Don't resolve or install dependencies
-        #[arg(long)]
-        no_deps: bool,
+        /// Whether to resolve and install dependencies
+        #[arg(long, default_value = "all", value_parser = ["all", "none"])]
+        deps: String,
         #[command(flatten)]
         resolution_opts: ResolutionOptions,
     },
@@ -141,9 +141,9 @@ pub enum SourceCommand {
         /// Compute and add each file's SHA256 checksum
         #[arg(long, default_value_t = false)]
         compute_checksum: bool,
-        /// Do not detect and add top level symbols to index
-        #[arg(long, default_value_t = false)]
-        no_index_symbols: bool,
+        /// Control whether symbols are indexed when adding sources
+        #[arg(long, default_value = "on", value_parser = ["on", "off"])]
+        index_symbols: String,
     },
     /// Remove model interchange files from project metadata
     #[clap(alias = "rm")]
@@ -163,12 +163,10 @@ pub enum UsageCommand {
         /// Version constraint (semver syntax)
         #[clap(verbatim_doc_comment)]
         version_constraint: Option<String>,
-        /// Do not automatically resolve dependencies
-        #[arg(long, default_value_t = false)]
-        no_lock: bool,
-        /// Do not automatically install dependencies
-        #[arg(long, default_value_t = false)]
-        no_sync: bool,
+        /// Controls side-effects: manifest (only edit .project.json),
+        /// lock (also update lockfile), sync (also install deps)
+        #[arg(long, default_value = "sync", value_parser = ["manifest", "lock", "sync"])]
+        update: String,
         #[command(flatten)]
         resolution_opts: ResolutionOptions,
         #[command(flatten)]
@@ -400,9 +398,9 @@ pub struct InstallOptions {
     /// Install even if another version is already installed
     #[arg(long)]
     pub allow_multiple: bool,
-    /// Don't install any dependencies
-    #[arg(long)]
-    pub no_deps: bool,
+    /// Whether to install dependencies
+    #[arg(long, default_value = "all", value_parser = ["all", "none"])]
+    pub deps: String,
 }
 
 /// Control how packages and their dependencies are resolved.
@@ -437,20 +435,16 @@ pub struct ResolutionOptions {
         verbatim_doc_comment
     )]
     pub default_index: Vec<String>,
-    /// Do not use any index when resolving project(s) and/or their dependencies
-    // TODO: document somewhere which sources are supported:
-    // - file:// (sometimes also regular paths)
-    // - git (https?, ssh?)
-    // - http(s)
-    // - index
+    /// Whether to use default indexes when resolving
     #[arg(
         long,
-        default_value_t = false,
+        default_value = "default",
+        value_parser = ["default", "none"],
         conflicts_with_all = ["index", "default_index"],
         global = true,
         help_heading = "Resolution options",
     )]
-    pub no_index: bool,
+    pub index_mode: String,
     /// Don't ignore KerML/SysML v2 standard libraries if specified as dependencies
     #[arg(
         long,
@@ -519,12 +513,9 @@ pub struct GlobalOptions {
         help_heading = "Global options"
     )]
     pub quiet: bool,
-    /// Disable discovery of configuration files
-    #[arg(long, global = true, help_heading = "Global options", env = env_vars::SYSAND_NO_CONFIG)]
-    pub no_config: bool,
-    /// Give path to `sysand.toml` to use for configuration
-    #[arg(long, global = true, help_heading = "Global options", env = env_vars::SYSAND_CONFIG_FILE)]
-    pub config_file: Option<String>,
+    /// Config mode: auto (discover), none (disable), or path to sysand.toml
+    #[arg(long, default_value = "auto", global = true, help_heading = "Global options")]
+    pub config: String,
     /// Print help
     #[arg(long, short, global = true, action = clap::ArgAction::HelpLong, help_heading = "Global options")]
     pub help: Option<bool>,

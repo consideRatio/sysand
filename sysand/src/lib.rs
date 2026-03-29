@@ -155,19 +155,16 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
         crate::get_env(dir)?
     };
 
-    let auto_config = if args.global_opts.no_config {
-        Config::default()
-    } else {
-        load_configs(project_root.as_deref().unwrap_or(Utf8Path::new(".")))?
+    let config = match args.global_opts.config.as_str() {
+        "none" => Config::default(),
+        "auto" => load_configs(project_root.as_deref().unwrap_or(Utf8Path::new(".")))?,
+        path => {
+            let mut config = get_config(path)?;
+            let auto_config = load_configs(project_root.as_deref().unwrap_or(Utf8Path::new(".")))?;
+            config.merge(auto_config);
+            config
+        }
     };
-
-    let mut config = if let Some(config_file) = &args.global_opts.config_file {
-        get_config(config_file)?
-    } else {
-        Config::default()
-    };
-
-    config.merge(auto_config);
 
     let client = create_reqwest_client()?;
 
@@ -405,12 +402,13 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
         Command::Usage(cli::UsageCommand::Add {
             locator,
             version_constraint,
-            no_lock,
-            no_sync,
+            update,
             resolution_opts,
             source_opts,
         }) => {
             let iri = iri_or_path_to_iri(locator.iri, locator.path)?;
+            let no_lock = update == "manifest";
+            let no_sync = update == "manifest" || update == "lock";
             command_add(
                 iri,
                 version_constraint,
@@ -419,8 +417,8 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                 resolution_opts,
                 source_opts,
                 config,
-                args.global_opts.config_file,
-                args.global_opts.no_config,
+                config_file_for_compat(&args.global_opts.config),
+                args.global_opts.config == "none",
                 ctx,
                 client,
                 runtime,
@@ -432,15 +430,15 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
             command_remove(
                 iri,
                 ctx,
-                args.global_opts.config_file,
-                args.global_opts.no_config,
+                config_file_for_compat(&args.global_opts.config),
+                args.global_opts.config == "none",
             )
         }
         Command::Source(cli::SourceCommand::Add {
             paths,
             compute_checksum: add_checksum,
-            no_index_symbols,
-        }) => command_include(paths, add_checksum, !no_index_symbols, ctx),
+            index_symbols,
+        }) => command_include(paths, add_checksum, index_symbols == "on", ctx),
         Command::Source(cli::SourceCommand::Remove { paths }) => command_exclude(paths, ctx),
         Command::Build {
             path,
@@ -496,19 +494,27 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
             version,
             target,
             resolution_opts,
-            no_deps,
+            deps,
         } => commands::clone::command_clone(
             locator,
             version,
             target,
             ctx,
-            no_deps,
+            deps == "none",
             resolution_opts,
             &config,
             client,
             runtime,
             basic_auth_policy,
         ),
+    }
+}
+
+/// Backward compat: extract config file path from the unified --config flag
+fn config_file_for_compat(config: &str) -> Option<String> {
+    match config {
+        "auto" | "none" => None,
+        path => Some(path.to_string()),
     }
 }
 

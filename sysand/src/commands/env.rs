@@ -58,12 +58,13 @@ pub fn command_env_install<Policy: HTTPAuthentication>(
     let InstallOptions {
         allow_overwrite,
         allow_multiple,
-        no_deps,
+        deps,
     } = install_opts;
+    let no_deps = deps == "none";
     let ResolutionOptions {
         index,
         default_index,
-        no_index,
+        index_mode,
         include_std,
     } = resolution_opts;
 
@@ -79,7 +80,7 @@ pub fn command_env_install<Policy: HTTPAuthentication>(
         HashMap::default()
     };
 
-    let index_urls = if no_index {
+    let index_urls = if index_mode == "none" {
         None
     } else {
         Some(config.index_urls(index, vec![DEFAULT_INDEX_URL.to_string()], default_index)?)
@@ -190,12 +191,13 @@ pub fn command_env_install_path<Policy: HTTPAuthentication>(
     let InstallOptions {
         allow_overwrite,
         allow_multiple,
-        no_deps,
+        deps,
     } = install_opts;
+    let no_deps = deps == "none";
     let ResolutionOptions {
         index,
         default_index,
-        no_index,
+        index_mode,
         include_std,
     } = resolution_opts;
 
@@ -224,7 +226,7 @@ pub fn command_env_install_path<Policy: HTTPAuthentication>(
         HashMap::default()
     };
 
-    let index_urls = if no_index {
+    let index_urls = if index_mode == "none" {
         None
     } else {
         Some(config.index_urls(index, vec![DEFAULT_INDEX_URL.to_string()], default_index)?)
