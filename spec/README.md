@@ -17,4 +17,5 @@ designed this way?", look here.
 - `error-model.md` — SysandError, ErrorCode enum
 - `version-resolution.md` — semver, version constraints
 - `dependency-resolution.md` — lock, sync, solver pipeline, lockfile contents
+- `crate-structure.md` — Rust core module layout: facade/, types/, internal/; migration mapping from reference
 - `binding-architecture.md` — facade pattern, storage backends, binding tools, maintenance strategy

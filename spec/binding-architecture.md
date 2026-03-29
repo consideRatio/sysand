@@ -8,14 +8,16 @@ tools.
 
 The core library exports facade functions that accept trait objects
 (`impl ProjectMut` / `impl ProjectRead`) and handle error mapping to
-`SysandError`. Each facade function wraps one internal generic function:
+`SysandError`. Each facade function wraps one internal generic function.
+See `crate-structure.md` for the module layout and migration mapping.
 
 ```rust
-pub fn project_init(
+pub fn init(
     project: &mut impl ProjectMut,
     opts: InitOptions,
 ) -> Result<(), SysandError> {
-    do_init(project, opts).map_err(SysandError::from)
+    internal::commands::init::do_init(project, opts)
+        .map_err(SysandError::from)
 }
 ```
 
@@ -35,11 +37,11 @@ a `ProjectMut` / `ProjectRead` instance. The facade does the rest.
 ```rust
 // Filesystem (CLI, Java, Python)
 let mut project = LocalSrcProject::open(path)?;
-facade::project_init(&mut project, opts)?;
+sysand_core::init(&mut project, opts)?;
 
 // Browser (JS/WASM)
 let mut project = ProjectLocalBrowserStorage::open(prefix, root_path)?;
-facade::project_init(&mut project, opts)?;
+sysand_core::init(&mut project, opts)?;
 ```
 
 ## Binding Tools
