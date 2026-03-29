@@ -10,8 +10,11 @@
 pub mod init;
 pub mod source;
 pub mod usage;
+pub mod env;
 
 #[cfg(feature = "filesystem")]
 pub mod build;
 #[cfg(feature = "filesystem")]
 pub mod locate;
+#[cfg(feature = "filesystem")]
+pub mod workspace;

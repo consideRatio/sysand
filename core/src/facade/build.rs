@@ -41,7 +41,7 @@ where
     })
 }
 
-fn compression_to_internal(c: Compression) -> Result<KparCompressionMethod, SysandError> {
+pub(crate) fn compression_to_internal(c: Compression) -> Result<KparCompressionMethod, SysandError> {
     match c {
         Compression::Stored => Ok(KparCompressionMethod::Stored),
         Compression::Deflated => Ok(KparCompressionMethod::Deflated),
