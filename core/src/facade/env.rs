@@ -3,12 +3,8 @@
 
 //! Environment management facade functions.
 
-// TODO: pub fn sync(ctx, opts) -> Result<(), SysandError>
-// Needs: resolver chain, HTTP client, tokio runtime, auth policy.
-// Same infrastructure question as lock::update.
-
-// TODO: pub fn install(ctx, iri, opts) -> Result<(), SysandError>
-// Needs: same infrastructure as sync + lock.
+// TODO: pub fn install(ctx, iri, net, opts) -> Result<(), SysandError>
+// Needs: resolver + lock + sync combined. Complex orchestration.
 
 use crate::env::{ReadEnvironment, WriteEnvironment};
 use crate::error::SysandError;
@@ -34,6 +30,88 @@ where
         .into_iter()
         .map(|(iri, version)| EnvEntry { iri, version })
         .collect())
+}
+
+/// Sync the environment to match the lockfile.
+///
+/// Reads `sysand-lock.toml` and ensures `sysand_env/` matches it:
+/// missing projects are fetched and installed, mismatched versions
+/// are replaced.
+/// Sync the environment to match the lockfile.
+///
+/// Reads `sysand-lock.toml` and ensures `sysand_env/` matches it:
+/// missing projects are fetched and installed, mismatched versions
+/// are replaced.
+#[cfg(all(feature = "filesystem", feature = "networking"))]
+pub fn sync<Policy: crate::auth::HTTPAuthentication>(
+    lock: &crate::lock::Lock,
+    project_root: &camino::Utf8Path,
+    env: &mut crate::env::local_directory::LocalDirectoryEnvironment,
+    net: &crate::types::network::NetworkContext<Policy>,
+    provided_iris: &std::collections::HashMap<String, Vec<crate::project::memory::InMemoryProject>>,
+) -> Result<(), SysandError> {
+    use crate::project::{
+        AsSyncProjectTokio, ProjectReadAsync,
+        gix_git_download::{GixDownloadedError, GixDownloadedProject},
+        local_kpar::LocalKParProject,
+        local_src::LocalSrcProject,
+        reqwest_kpar_download::ReqwestKparDownloadedProject,
+        reqwest_src::ReqwestSrcProjectAsync,
+    };
+
+    let client = net.client.clone();
+    let runtime = net.runtime.clone();
+    let auth = net.auth.clone();
+
+    crate::commands::sync::do_sync(
+        lock,
+        env,
+        Some(|src_path: &camino::Utf8Path| LocalSrcProject {
+            nominal_path: Some(src_path.to_path_buf()),
+            project_path: project_root.join(src_path),
+        }),
+        Some({
+            let client = client.clone();
+            let runtime = runtime.clone();
+            let auth = auth.clone();
+            move |remote_src: String| -> Result<AsSyncProjectTokio<ReqwestSrcProjectAsync<Policy>>, url::ParseError> {
+                Ok(ReqwestSrcProjectAsync {
+                    client: client.clone(),
+                    url: reqwest::Url::parse(&remote_src)?,
+                    auth_policy: auth.clone(),
+                }
+                .to_tokio_sync(runtime.clone()))
+            }
+        }),
+        Some(|kpar_path: &camino::Utf8Path| {
+            LocalKParProject::new_guess_root_nominal(
+                project_root.join(kpar_path),
+                kpar_path,
+            )
+            .expect("failed to open local KPAR")
+        }),
+        Some({
+            let client = client.clone();
+            let runtime = runtime.clone();
+            let auth = auth.clone();
+            move |remote_kpar: String| -> Result<AsSyncProjectTokio<ReqwestKparDownloadedProject<Policy>>, url::ParseError> {
+                Ok(
+                    ReqwestKparDownloadedProject::new_guess_root(
+                        reqwest::Url::parse(&remote_kpar)?,
+                        client.clone(),
+                        auth.clone(),
+                    )
+                    .expect("failed to download remote KPAR")
+                    .to_tokio_sync(runtime.clone()),
+                )
+            }
+        }),
+        Some(|remote_git: String| -> Result<GixDownloadedProject, GixDownloadedError> {
+            GixDownloadedProject::new(remote_git)
+        }),
+        provided_iris,
+    )
+    .map_err(|e| SysandError::new(crate::error::ErrorCode::IoError, e.to_string()))
 }
 
 /// Uninstall a project from the environment.

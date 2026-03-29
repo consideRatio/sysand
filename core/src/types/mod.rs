@@ -9,5 +9,6 @@
 
 pub mod context;
 pub mod enums;
+pub mod network;
 pub mod options;
 pub mod output;
