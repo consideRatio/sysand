@@ -2,36 +2,46 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use std::sync::Arc;
-
 use camino::Utf8PathBuf;
 use jni::{
     JNIEnv,
-    errors::Error,
     objects::{JClass, JObject, JObjectArray, JString},
 };
 use sysand_core::{
-    auth::Unauthenticated,
-    build::{KParBuildError, KparCompressionMethod},
-    commands,
-    env::local_directory::{self, LocalWriteError},
-    info::InfoError,
-    init::InitError,
-    project::{
-        local_src::{LocalSrcError, LocalSrcProject},
-        utils::wrapfs,
+    SysandError,
+    env::local_directory,
+    project::local_src::LocalSrcProject,
+    types::{
+        enums::Compression,
+        options::{BuildOptions, InitOptions},
     },
-    resolve::{net_utils::create_reqwest_client, standard::standard_resolver},
     workspace::Workspace,
 };
 
 use crate::{
     conversion::{ToJObject, ToJObjectArray, java_map_to_index_map},
-    exceptions::{ExceptionKind, JniExt, StdlibExceptionKind},
+    exceptions::JniExt,
 };
 
 mod conversion;
 mod exceptions;
+
+// ---------------------------------------------------------------------------
+// Unified error handling
+// ---------------------------------------------------------------------------
+
+fn throw_sysand_error(env: &mut JNIEnv<'_>, err: SysandError) {
+    let message = format!("[{}] {}", err.code, err.message);
+    env.throw_new(
+        "com/sensmetry/sysand/exceptions/SysandException",
+        &message,
+    )
+    .expect("failed to throw SysandException");
+}
+
+// ---------------------------------------------------------------------------
+// JNI functions
+// ---------------------------------------------------------------------------
 
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_com_sensmetry_sysand_Sysand_init<'local>(
@@ -46,71 +56,31 @@ pub extern "system" fn Java_com_sensmetry_sysand_Sysand_init<'local>(
     let Some(name) = env.get_str(&name, "name") else {
         return;
     };
-    // If `publisher` is `null`, no publisher is specified
-    let publisher: Option<String> = match env.get_string(&publisher) {
-        Ok(s) => Some(s.into()),
-        Err(e) => match e {
-            Error::NullPtr(_) => None,
-            _ => {
-                env.throw_runtime_exception(format!("failed to get argument `publisher`: {}", e));
-                return;
-            }
-        },
-    };
+    let publisher = env.get_nullable_str(&publisher);
     let Some(version) = env.get_str(&version, "version") else {
         return;
     };
     let Some(path) = env.get_str(&path, "path") else {
         return;
     };
+    let license = env.get_nullable_str(&license);
 
-    // If `license` is `null`, no license is specified
-    let license: Option<String> = match env.get_string(&license) {
-        Ok(s) => Some(s.into()),
-        Err(e) => match e {
-            Error::NullPtr(_) => None,
-            _ => {
-                env.throw_runtime_exception(format!("failed to get argument `license`: {}", e));
-                return;
-            }
-        },
+    let mut project = LocalSrcProject {
+        nominal_path: None,
+        project_path: Utf8PathBuf::from(&path),
     };
-
-    let command_result =
-        commands::init::do_init_local_file(name, publisher, version, license, path.into());
-    match command_result {
-        Ok(_) => {}
-        Err(error) => match error {
-            InitError::SemVerParse(..) => {
-                env.throw_exception(ExceptionKind::InvalidSemanticVersion, error.to_string())
-            }
-            InitError::SPDXLicenseParse(..) => {
-                env.throw_exception(ExceptionKind::InvalidSPDXLicense, error.to_string())
-            }
-            InitError::Project(suberror) => match suberror {
-                LocalSrcError::AlreadyExists(msg) => {
-                    env.throw_exception(ExceptionKind::ProjectAlreadyExists, msg)
-                }
-                LocalSrcError::Deserialize(subsuberror) => {
-                    env.throw_exception(ExceptionKind::InvalidValue, subsuberror.to_string())
-                }
-                LocalSrcError::Io(subsuberror) => {
-                    env.throw_exception(ExceptionKind::IOError, subsuberror.to_string())
-                }
-                LocalSrcError::Path(subsuberror) => {
-                    env.throw_exception(ExceptionKind::PathError, subsuberror.to_string())
-                }
-                LocalSrcError::Serialize(subsuberror) => {
-                    env.throw_exception(ExceptionKind::SerializationError, subsuberror.to_string())
-                }
-                LocalSrcError::ImpossibleRelativePath(_) => {
-                    env.throw_exception(ExceptionKind::PathError, suberror.to_string())
-                }
-                LocalSrcError::MissingMeta => {
-                    env.throw_exception(ExceptionKind::SysandException, suberror.to_string())
-                }
-            },
+    match sysand_core::facade::init::init(
+        &mut project,
+        InitOptions {
+            name: Some(name),
+            publisher,
+            version: Some(version),
+            license,
+            allow_non_spdx: false,
         },
+    ) {
+        Ok(()) => {}
+        Err(e) => throw_sysand_error(&mut env, e),
     }
 }
 
@@ -137,143 +107,10 @@ pub extern "system" fn Java_com_sensmetry_sysand_Sysand_env<'local>(
     let Some(path) = env.get_str(&path, "path") else {
         return;
     };
-    let command_result = commands::env::do_env_local_dir(path);
-    match command_result {
-        Ok(_) => {}
-        Err(error) => match error {
-            commands::env::EnvError::AlreadyExists(path) => env.throw_exception(
-                ExceptionKind::PathError,
-                format!("Path already exists: {}", path),
-            ),
-            commands::env::EnvError::Write(suberror) => match suberror {
-                LocalWriteError::Io(subsuberror) => {
-                    env.throw_exception(ExceptionKind::IOError, subsuberror.to_string())
-                }
-                LocalWriteError::Deserialize(subsuberror) => {
-                    env.throw_exception(ExceptionKind::InvalidValue, subsuberror.to_string())
-                }
-                LocalWriteError::Path(subsuberror) => {
-                    env.throw_exception(ExceptionKind::PathError, subsuberror.to_string())
-                }
-                LocalWriteError::AlreadyExists(msg) => {
-                    env.throw_exception(ExceptionKind::IOError, msg)
-                }
-                LocalWriteError::Serialize(subsuberror) => {
-                    env.throw_exception(ExceptionKind::SerializationError, subsuberror.to_string())
-                }
-                LocalWriteError::TryMove(subsuberror) => {
-                    env.throw_exception(ExceptionKind::IOError, subsuberror.to_string())
-                }
-                LocalWriteError::LocalRead(subsuberror) => {
-                    env.throw_exception(ExceptionKind::IOError, subsuberror.to_string())
-                }
-                LocalWriteError::ImpossibleRelativePath(_) => {
-                    env.throw_exception(ExceptionKind::PathError, suberror.to_string())
-                }
-                LocalWriteError::MissingMeta => {
-                    env.throw_exception(ExceptionKind::SysandException, suberror.to_string())
-                }
-            },
-        },
+    match sysand_core::facade::env::create(camino::Utf8Path::new(&path)) {
+        Ok(()) => {}
+        Err(e) => throw_sysand_error(&mut env, e),
     }
-}
-
-#[unsafe(no_mangle)]
-pub extern "system" fn Java_com_sensmetry_sysand_Sysand_infoPath<'local>(
-    mut env: JNIEnv<'local>,
-    _class: JClass<'local>,
-    path: JString<'local>,
-) -> JObject<'local> {
-    let Some(path) = env.get_str(&path, "path") else {
-        return JObject::default();
-    };
-    let project = LocalSrcProject {
-        nominal_path: None,
-        project_path: Utf8PathBuf::from(&path),
-    };
-
-    let command_result = commands::info::do_info_project(&project);
-    match command_result {
-        Some(info_metadata) => info_metadata.to_jobject(&mut env).unwrap_or_default(),
-        None => JObject::default(),
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "system" fn Java_com_sensmetry_sysand_Sysand_info<'local>(
-    mut env: JNIEnv<'local>,
-    _class: JClass<'local>,
-    uri: JString<'local>,
-    relative_file_root: JString<'local>,
-    index_url: JString<'local>,
-) -> JObjectArray<'local> {
-    let Some(uri) = env.get_str(&uri, "uri") else {
-        return JObjectArray::default();
-    };
-    let client = match create_reqwest_client() {
-        Ok(c) => c,
-        Err(e) => {
-            env.throw_exception(ExceptionKind::SysandException, e.to_string());
-            return JObjectArray::default();
-        }
-    };
-
-    let runtime = {
-        let r = match tokio::runtime::Builder::new_current_thread().build() {
-            Ok(r) => r,
-            Err(e) => {
-                env.throw_exception(
-                    ExceptionKind::IOError,
-                    format!("Failed to build tokio runtime: {e}"),
-                );
-                return JObjectArray::default();
-            }
-        };
-        Arc::new(r)
-    };
-
-    let Some(relative_file_root) = env.get_str(&relative_file_root, "relativeFileRoot") else {
-        return JObjectArray::default();
-    };
-
-    let index_base_url = if index_url.is_null() {
-        None
-    } else {
-        let Some(index_url) = env.get_str(&index_url, "indexUrl") else {
-            return JObjectArray::default();
-        };
-        match url::Url::parse(&index_url) {
-            Ok(url) => Some(url),
-            Err(error) => {
-                env.throw_stdlib_exception(
-                    StdlibExceptionKind::UnsupportedOperationException,
-                    format!("Failed to parse index URL `{}`: {}", index_url, error),
-                );
-                return JObjectArray::default();
-            }
-        }
-    };
-
-    let combined_resolver = standard_resolver(
-        Some(Utf8PathBuf::from(relative_file_root)),
-        None,
-        Some(client),
-        index_base_url.map(|x| vec![x]),
-        runtime,
-        // FIXME: Add Java support for authentication
-        Arc::new(Unauthenticated {}),
-    );
-
-    let results = match commands::info::do_info(&uri, &combined_resolver) {
-        Ok(matches) => matches,
-        Err(InfoError::NoResolve(..)) => Vec::new(),
-        Err(e @ (InfoError::UnsupportedIri(..) | InfoError::Resolution(_))) => {
-            env.throw_exception(ExceptionKind::ResolutionError, e.to_string());
-            return JObjectArray::default();
-        }
-    };
-
-    results.to_jobject_array(&mut env).unwrap_or_default()
 }
 
 #[unsafe(no_mangle)]
@@ -288,7 +125,7 @@ pub extern "system" fn Java_com_sensmetry_sysand_Sysand_workspaceProjectPaths<'l
     let workspace = match Workspace::new(workspace_path.into()) {
         Ok(w) => w,
         Err(e) => {
-            env.throw_exception(ExceptionKind::InvalidWorkspace, e.to_string());
+            throw_sysand_error(&mut env, SysandError::from(e));
             return JObjectArray::default();
         }
     };
@@ -312,10 +149,7 @@ pub extern "system" fn Java_com_sensmetry_sysand_Sysand_setProjectIndex<'local>(
     };
     let rust_index = match java_map_to_index_map(&mut env, &index) {
         Ok(index) => index,
-        Err(jni::errors::Error::JavaException) => {
-            // Exception already thrown by get_str
-            return;
-        }
+        Err(jni::errors::Error::JavaException) => return,
         Err(e) => {
             env.throw_runtime_exception(format!("Failed to convert index map: {e}"));
             return;
@@ -325,107 +159,11 @@ pub extern "system" fn Java_com_sensmetry_sysand_Sysand_setProjectIndex<'local>(
         nominal_path: None,
         project_path: Utf8PathBuf::from(project_path),
     };
-    let _ = project
-        .set_index(rust_index)
-        .inspect_err(|e| env.throw_exception(ExceptionKind::SysandException, e.to_string()));
-}
-
-fn handle_build_error(env: &mut JNIEnv<'_>, error: KParBuildError<LocalSrcError>) {
-    match error {
-        KParBuildError::ProjectRead(error) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!("Project read error: {}", error),
-            );
-        }
-        KParBuildError::LocalSrc(error) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!("Local src error: {}", error),
-            );
-        }
-        KParBuildError::IncompleteSource(error) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!("Incomplete source error: {}", error),
-            );
-        }
-        KParBuildError::Io(error) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!("IO error: {}", error),
-            );
-        }
-        KParBuildError::Validation(error) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!("Validation error: {}", error),
-            );
-        }
-        KParBuildError::Extract(error) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!("Extract error: {}", error),
-            );
-        }
-        KParBuildError::UnknownFormat(error) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!("Unknown format error: {}", error),
-            );
-        }
-        KParBuildError::MissingInfo => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                "Missing project information",
-            );
-        }
-        KParBuildError::MissingMeta => {
-            env.throw_exception(ExceptionKind::SysandException, "Missing project metadata");
-        }
-        KParBuildError::Zip(error) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!("Zip write error: {}", error),
-            );
-        }
-        KParBuildError::Serialize(msg, error) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!("Project serialization error: {}: {}", msg, error),
-            );
-        }
-        KParBuildError::WorkspaceRead(error) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!("Workspace read error: {}", error),
-            );
-        }
-        KParBuildError::PathUsage(usage) => {
-            env.throw_exception(
-                ExceptionKind::SysandException,
-                format!(
-                    "project includes a path usage `{usage}`,\n\
-        which is unlikely to be available on other computers at the same path"
-                ),
-            );
-        }
-        KParBuildError::WorkspaceMetamodelConflict { .. } => {
-            env.throw_exception(ExceptionKind::SysandException, error.to_string());
-        }
-    }
-}
-
-fn compression_from_java_string(
-    env: &mut JNIEnv<'_>,
-    compression: String,
-) -> Option<KparCompressionMethod> {
-    match KparCompressionMethod::try_from(compression) {
-        Ok(compression) => Some(compression),
-        Err(err) => {
-            env.throw_exception(ExceptionKind::SysandException, err.to_string());
-            None
-        }
+    if let Err(e) = project.set_index(rust_index) {
+        throw_sysand_error(
+            &mut env,
+            SysandError::new(sysand_core::ErrorCode::Internal, e.to_string()),
+        );
     }
 }
 
@@ -445,24 +183,28 @@ pub extern "system" fn Java_com_sensmetry_sysand_Sysand_buildProject<'local>(
     };
     let project = LocalSrcProject {
         nominal_path: None,
-        project_path: Utf8PathBuf::from(project_path),
+        project_path: Utf8PathBuf::from(&project_path),
     };
-    let Some(compression) = env.get_str(&compression, "compression") else {
+    let Some(compression_str) = env.get_str(&compression, "compression") else {
         return;
     };
-    let Some(compression) = compression_from_java_string(&mut env, compression) else {
-        return;
+    let compression = match parse_compression(&compression_str) {
+        Ok(c) => c,
+        Err(e) => {
+            throw_sysand_error(&mut env, e);
+            return;
+        }
     };
-    let command_result = sysand_core::commands::build::do_build_kpar(
+    match sysand_core::facade::build::build(
         &project,
-        &output_path,
-        compression,
-        true,
-        false,
-    );
-    match command_result {
+        camino::Utf8Path::new(&output_path),
+        BuildOptions {
+            compression,
+            ..Default::default()
+        },
+    ) {
         Ok(_) => {}
-        Err(error) => handle_build_error(&mut env, error),
+        Err(e) => throw_sysand_error(&mut env, e),
     }
 }
 
@@ -483,33 +225,54 @@ pub extern "system" fn Java_com_sensmetry_sysand_Sysand_buildWorkspace<'local>(
     let workspace = match Workspace::new(workspace_path.into()) {
         Ok(w) => w,
         Err(e) => {
-            env.throw_exception(ExceptionKind::InvalidWorkspace, e.to_string());
+            throw_sysand_error(&mut env, SysandError::from(e));
             return;
         }
     };
-    let Some(compression) = env.get_str(&compression, "compression") else {
+    let Some(compression_str) = env.get_str(&compression, "compression") else {
         return;
     };
-    let Some(compression) = compression_from_java_string(&mut env, compression) else {
-        return;
-    };
-    match wrapfs::create_dir_all(&output_path) {
-        Ok(_) => {}
-        Err(error) => {
-            env.throw_exception(ExceptionKind::IOError, error.to_string());
+    let compression = match parse_compression(&compression_str) {
+        Ok(c) => c,
+        Err(e) => {
+            throw_sysand_error(&mut env, e);
             return;
         }
+    };
+
+    if let Err(e) = sysand_core::project::utils::wrapfs::create_dir_all(&output_path) {
+        throw_sysand_error(&mut env, SysandError::from(e));
+        return;
     }
 
-    let command_result = sysand_core::commands::build::do_build_workspace_kpars(
+    match sysand_core::facade::workspace::build(
         &workspace,
-        &output_path,
-        compression,
-        true,
-        false,
-    );
-    match command_result {
+        camino::Utf8Path::new(&output_path),
+        BuildOptions {
+            compression,
+            ..Default::default()
+        },
+    ) {
         Ok(_) => {}
-        Err(error) => handle_build_error(&mut env, error),
+        Err(e) => throw_sysand_error(&mut env, e),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+fn parse_compression(s: &str) -> Result<Compression, SysandError> {
+    match s.to_ascii_uppercase().as_str() {
+        "STORED" => Ok(Compression::Stored),
+        "DEFLATED" => Ok(Compression::Deflated),
+        "BZIP2" => Ok(Compression::Bzip2),
+        "ZSTD" => Ok(Compression::Zstd),
+        "XZ" => Ok(Compression::Xz),
+        "PPMD" => Ok(Compression::Ppmd),
+        other => Err(SysandError::new(
+            sysand_core::ErrorCode::FieldInvalid,
+            format!("unknown compression: {other}"),
+        )),
     }
 }
