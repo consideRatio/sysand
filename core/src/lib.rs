@@ -6,6 +6,9 @@
 pub mod error;
 pub use error::{ErrorCode, SysandError};
 
+pub mod types;
+pub mod facade;
+
 pub mod commands;
 pub use commands::*;
 
