@@ -3,6 +3,9 @@
 
 #![allow(refining_impl_trait)]
 
+pub mod error;
+pub use error::{ErrorCode, SysandError};
+
 pub mod commands;
 pub use commands::*;
 

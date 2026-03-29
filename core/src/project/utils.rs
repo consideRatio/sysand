@@ -91,6 +91,32 @@ pub enum FsIoError {
     IsDir(Utf8PathBuf, io::Error),
 }
 
+impl FsIoError {
+    /// Returns the primary path involved in this I/O error, if any.
+    pub fn path_context(&self) -> Option<String> {
+        match self {
+            Self::Canonicalize(p, _)
+            | Self::MkDir(p, _)
+            | Self::OpenFile(p, _)
+            | Self::Metadata(p, _)
+            | Self::WriteFile(p, _)
+            | Self::ReadDir(p, _)
+            | Self::ReadFile(p, _)
+            | Self::CreateFile(p, _)
+            | Self::RmFile(p, _)
+            | Self::RmDir(p, _)
+            | Self::IsFile(p, _)
+            | Self::IsDir(p, _) => Some(p.to_string()),
+            Self::Move(from, _, _) | Self::CopyFile(from, _, _) => Some(from.to_string()),
+            Self::MetadataHandle(_)
+            | Self::CreateTempFile(_)
+            | Self::MkTempDir(_)
+            | Self::ReadFileHandle(_)
+            | Self::CurrentDir(_) => None,
+        }
+    }
+}
+
 /// Wrappers for filesystem I/O functions to return `FsIoError`.
 /// Copies the `std` interface 1 to 1, except for the error type.
 pub mod wrapfs {
