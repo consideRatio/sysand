@@ -3,8 +3,11 @@
 
 //! Environment management facade functions.
 
-// TODO: pub fn install(ctx, iri, net, opts) -> Result<(), SysandError>
-// Needs: resolver + lock + sync combined. Complex orchestration.
+// Note: A full `install` orchestration (resolve + lock + sync) is
+// complex and CLI-specific. The facade exposes `install_project` which
+// installs a single already-resolved project into the environment.
+// The CLI/binding layer handles resolver assembly and the lock+sync
+// orchestration using `lock::update` and `env::sync`.
 
 use crate::env::{ReadEnvironment, WriteEnvironment};
 use crate::error::SysandError;
@@ -112,6 +115,37 @@ pub fn sync<Policy: crate::auth::HTTPAuthentication>(
         provided_iris,
     )
     .map_err(|e| SysandError::new(crate::error::ErrorCode::IoError, e.to_string()))
+}
+
+/// Install a single already-resolved project into the environment.
+///
+/// The caller is responsible for resolving the project first (via
+/// a resolver or by opening a local project directly). For the full
+/// resolve + lock + sync orchestration, use `lock::update` followed
+/// by `env::sync`.
+pub fn install_project<P, E>(
+    iri: &str,
+    project: &P,
+    env: &mut E,
+    allow_overwrite: bool,
+    allow_multiple: bool,
+) -> Result<(), SysandError>
+where
+    P: crate::project::ProjectRead,
+    E: crate::env::WriteEnvironment + crate::env::ReadEnvironment,
+    P::Error: Into<SysandError>,
+    E::ReadError: Into<SysandError>,
+    E::WriteError: Into<SysandError>,
+    <E::InterchangeProjectMut as crate::project::ProjectRead>::Error: Into<SysandError>,
+{
+    crate::commands::env::do_env_install_project(
+        iri,
+        project,
+        env,
+        allow_overwrite,
+        allow_multiple,
+    )
+    .map_err(|e| SysandError::new(crate::error::ErrorCode::EnvConflict, e.to_string()))
 }
 
 /// Uninstall a project from the environment.
