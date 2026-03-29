@@ -408,69 +408,95 @@ implement internal traits, not facade types.
 **Tests:** Update `browser_basic.spec.js` to use new API shape. Add
 tests for newly-bound commands.
 
-### Step 4: Remove old code
+### Step 4: Remove old code (DONE)
 
-- Java: Delete `Sysand.java`, 9 exception classes, old JNI functions
-- Python: Delete `do_*` functions, old error mapping
-- JS: Delete `doInitJsLocalStorage`, `doEnvJsLocalStorage`
+- Python: Deleted `_info.py`, `_sources.py`, `env/_sources.py`,
+  removed info/sources Rust functions and tests
+- Java: Deleted `ExceptionKind` enum (10 variants), `StdlibExceptionKind`,
+  removed info/infoPath JNI functions, `handle_build_error` match block
+- JS: Replaced `do_init_js_local_storage` → `init`,
+  `do_env_js_local_storage` → `env_create`
 
-## Per-Surface Line Counts
+## Actual Line Counts
 
-| Surface | Current (Rust) | Current (Host) | Target (Rust) | Target (Host)     |
-| ------- | -------------- | -------------- | ------------- | ----------------- |
-| Java    | ~400 lines     | ~600 lines     | ~200 lines    | ~400 lines        |
-| Python  | ~600 lines     | ~50 lines      | ~300 lines    | ~50 lines         |
-| JS/WASM | ~70 lines      | ~0 lines       | ~300 lines    | ~50 lines (.d.ts) |
+| Surface | Before (Rust) | After (Rust) | Notes                            |
+| ------- | ------------- | ------------ | -------------------------------- |
+| Python  | ~600 lines    | ~310 lines   | 40+ error match arms eliminated  |
+| Java    | ~516 lines    | ~280 lines   | 10 exception kinds → 1 function  |
+| JS/WASM | ~70 lines     | ~90 lines    | + wrapper .js + .d.ts            |
 
-Net: Java and Python shrink (simpler error handling, facade does the
-work). JS grows (many more commands bound).
+## Lessons from Implementation
 
-## Lessons from Plan B Implementation
+### All bindings
 
-The facade shape has implications for bindings:
+1. **Single error converter is the biggest win.** Python went from 40+
+   match arms across 13 functions to one `sysand_err()` call. Java
+   went from `ExceptionKind` enum + `handle_build_error` (80 lines) to
+   one `throw_sysand_error()`. This alone justifies the unified error
+   model.
 
-1. **Facade functions are generic over storage.** e.g.,
-   `facade::init::init<P: ProjectMut>` with
-   `where P::Error: Into<SysandError>`. Bindings resolve the generic
-   by constructing the concrete storage type (`LocalSrcProject` for
-   filesystem, `ProjectLocalBrowserStorage` for browser). The generic
-   is invisible to the host language user.
+2. **Facade generics are invisible to binding authors.** The `where
+   P::Error: Into<SysandError>` bound is satisfied automatically by
+   the concrete storage type. Binding code just constructs
+   `LocalSrcProject` and calls `facade::init::init(&mut project, opts)`.
 
-2. **`NetworkContext<Policy>` is generic over auth policy.** Bindings
-   must pick a concrete auth type. For Java/Python (CLI-like), this is
-   `StandardHTTPAuthentication`. The binding constructs `NetworkContext`
-   once and holds it.
+3. **Info and sources cleanly removed.** No internal code depends on
+   them. Tests were either removed (info tests) or rewritten to verify
+   the same flow without sources calls.
 
-3. **`lock::update` takes a pre-built resolver.** The resolver assembly
-   logic (`get_overrides`, priority chain) currently lives in the CLI
-   crate. Bindings that need lock/sync must either:
-   - Duplicate the ~50-line resolver assembly, or
-   - Use a shared helper (consider moving `get_overrides` + resolver
-     assembly to core as a `build_default_resolver(net)` helper)
+### Python-specific
 
-4. **`env::sync` hides the 13-param `do_sync`.** Bindings just pass
-   `NetworkContext` + lock + env. This is the biggest simplification.
+4. **Flat Rust + Python wrapper beats PyO3 submodules.** The existing
+   pattern (flat `_sysand_core` module + Python package layer for
+   namespacing) is simpler and already works. PyO3 submodules need
+   `sys.modules` hacks.
 
-5. **`env::install_project` and `clone::clone_project` are building
-   blocks.** The full "install with deps" orchestration (resolve +
-   lock + sync) would need to be reimplemented in each binding if they
-   want to support it. Consider adding a `facade::env::install_with_deps`
-   that composes the building blocks.
+5. **Case-insensitive string parsing.** Python enums use UPPER_SNAKE
+   names (`CompressionMethod.STORED`). The Rust side must
+   `to_ascii_lowercase()` before matching.
 
-## Risks
+### Java-specific
 
-- **Java accessor chain:** `client.source().add()` requires inner
-  classes or accessor objects that hold a reference back to the native
-  layer. Not complex, but more Java code than static methods.
+6. **`get_nullable_str` helper needed.** Java passes `null` for
+   optional strings (publisher, license). The old code had inline
+   null-checking per function. New `get_nullable_str` on `JniExt`
+   trait handles it uniformly.
 
-- **JS/WASM namespace:** wasm-bindgen doesn't natively support nested
-  module exports. May need a thin JS wrapper that re-exports flat
-  wasm-bindgen functions into namespace objects.
+7. **Java exception hierarchy eliminated.** 10 custom exception classes
+   (`InvalidSemanticVersion`, `ProjectAlreadyExists`, etc.) → single
+   `SysandException`. The Rust test that verified all exception .java
+   files exist was also removed.
 
-- **Python submodule import:** PyO3 submodules need `sys.modules`
-  registration for `from sysand.source import add` to work. Known
-  pattern but requires explicit setup.
+### JS/WASM-specific
 
-- **Resolver assembly duplication:** If bindings want lock/sync, they
-  need the resolver assembly logic. Currently CLI-only. Consider
-  moving to core or providing a default builder.
+8. **`From<BindingError> for SysandError` needed per binding.** The
+   JS/WASM storage backend has its own error type
+   (`io::local_storage::Error`) that doesn't live in core. The binding
+   crate must implement `From<Error> for SysandError` to satisfy the
+   facade's `P::Error: Into<SysandError>` bound.
+
+9. **JS namespace wrapper is the right pattern.** wasm-bindgen can't
+   export nested namespaces. The solution:
+   - Rust exports flat: `#[wasm_bindgen(js_name = init)]`,
+     `#[wasm_bindgen(js_name = env_create)]`
+   - `src/sysand.js` wrapper re-exports with namespace structure:
+     `export { init }; export const env = { create: _env_create };`
+   - Webpack aliases `"sysand"` → wrapper, `"sysand-wasm"` → raw
+     wasm-pack output
+   - `src/sysand.d.ts` provides TypeScript types for the namespaced API
+   - Tests import via `import("sysand")` and see the namespaced API
+
+10. **Every new WASM command needs 3 touch points:** Rust export in
+    `lib.rs`, re-export in `src/sysand.js`, type in `src/sysand.d.ts`.
+
+## Resolved Risks
+
+- **JS/WASM namespace:** Resolved via `src/sysand.js` wrapper pattern.
+- **Python submodule import:** Not needed — existing Python wrapper
+  package handles namespacing.
+- **Java accessor chain:** Not yet implemented — Java still uses static
+  methods on `Sysand` class. The `client.source().add()` pattern is
+  a future step (Java-side restructure).
+- **Resolver assembly duplication:** Confirmed as a real concern — any
+  binding wanting lock/sync needs the resolver assembly logic that
+  currently lives in the CLI crate.
