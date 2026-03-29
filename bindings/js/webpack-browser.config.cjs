@@ -1,18 +1,16 @@
 const path = require("path");
-//const HtmlWebpackPlugin = require('html-webpack-plugin');
-//const webpack = require('webpack');
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
-// const glob = require("glob");
 
 module.exports = {
-  //entry: glob.sync("tests/*.spec.js").map((x) => './' + x), //.concat(["./shiv.js"]),
-  entry: ["./browser_pkg/index.js"],
+  entry: ["./src/sysand.js"],
   output: {
     path: path.resolve(__dirname, "browser_dist"),
     filename: "bundle.js",
+    library: {
+      type: "module",
+    },
   },
   plugins: [
-    //new HtmlWebpackPlugin(),
     new WasmPackPlugin({
       crateDirectory: path.resolve(__dirname),
       outDir: path.resolve(__dirname, "browser_pkg"),
@@ -21,9 +19,13 @@ module.exports = {
   resolve: {
     modules: ["node_modules"],
     extensions: ["*", ".js", ".jsx", ".tsx", ".ts"],
+    alias: {
+      "sysand-wasm": path.resolve(__dirname, "browser_pkg"),
+    },
   },
-  mode: "development", // mode: 'production'
+  mode: "development",
   experiments: {
     asyncWebAssembly: true,
+    outputModule: true,
   },
 };

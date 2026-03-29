@@ -1,13 +1,3 @@
-//NON-working
-//import * as sysand from "sysand";
-//const sysand = await import("sysand");;
-
-// // For loading in Node
-// let sysand;
-// if(require) {
-//     sysand = require("../pkg_nodejs_dev/sysand.js");
-// }
-
 // For loading in browser
 let sysand;
 beforeAll(async function () {
@@ -23,7 +13,7 @@ beforeEach(async function () {
 });
 
 it("can initialise a project in browser local storage", async function () {
-  sysand.do_init_js_local_storage(
+  sysand.init(
     "basic_init",
     "a",
     "1.2.3",
@@ -39,7 +29,7 @@ it("can initialise a project in browser local storage", async function () {
 });
 
 it("can initialise an empty environment in browser local storage", async function () {
-  sysand.do_env_js_local_storage("sysand_storage", "/");
+  sysand.env.create("sysand_storage", "/");
   expect(window.localStorage.key(0)).toBe(
     "sysand_storage/sysand_env/entries.txt",
   );

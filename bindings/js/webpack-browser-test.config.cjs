@@ -20,7 +20,8 @@ module.exports = {
     modules: ["node_modules"],
     extensions: ["*", ".js", ".jsx", ".tsx", ".ts"],
     alias: {
-      sysand$: path.resolve(__dirname, "browser_pkg/index.js"),
+      sysand$: path.resolve(__dirname, "src/sysand.js"),
+      "sysand-wasm": path.resolve(__dirname, "browser_pkg"),
     },
   },
   mode: "development", // mode: 'production'
