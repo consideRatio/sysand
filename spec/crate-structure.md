@@ -23,20 +23,21 @@ core/src/
     mod.rs                re-exports all submodules
     init.rs               init
     locate.rs             locate
-    clone.rs              clone
+    clone.rs              clone_project (building block — copies files)
     build.rs              build
     source.rs             source::add, source::remove
     usage.rs              usage::add, usage::remove
     lock.rs               lock::update
-    env.rs                env::create, sync, install, uninstall, list
+    env.rs                env::create, sync, install_project, uninstall, list
     workspace.rs          workspace::locate, workspace::build
+  error.rs                SysandError, ErrorCode (top-level, not in types/)
   types/
     mod.rs                re-exports everything below
     context.rs            ProjectContext, WorkspaceContext
     enums.rs              ConfigMode, UpdateMode, DepsMode, Compression, ...
     options.rs            InitOptions, BuildOptions, UsageAddOptions, ...
     output.rs             BuildOutput, EnvEntry
-    error.rs              SysandError, ErrorCode
+    network.rs            NetworkContext<Policy> (infrastructure bundle)
   internal/               pub(crate) — not visible outside the crate
     commands/             command implementations (generic, trait-bounded)
     project/              ProjectRead, ProjectMut traits + implementations

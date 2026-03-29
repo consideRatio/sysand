@@ -385,21 +385,43 @@ New sub-enums added: `SourceCommand`, `UsageCommand`, `LockCommand`.
    facade function (`sysand_core::facade::locate::locate`). The others
    still call `command_*` functions for now.
 
-### Step 7: Rename flags (partial)
+### Step 7: Rename flags (DONE)
 
-| Old               | New                  | Status  |
-| ----------------- | -------------------- | ------- |
-| `--no-semver`     | (removed)            | done    |
-| `--no-spdx`       | `--allow-non-spdx`   | done    |
-| `--no-lock/sync`  | `--update manifest…` | pending |
-| `--no-deps`       | `--deps all\|none`   | pending |
-| `--no-index`      | `--index-mode …`     | pending |
-| `--no-index-syms` | `--index-symbols …`  | pending |
+| Old                             | New                     | Status |
+| ------------------------------- | ----------------------- | ------ |
+| `--no-semver`                   | (removed)               | done   |
+| `--no-spdx`                    | `--allow-non-spdx`      | done   |
+| `--no-lock` + `--no-sync`      | `--update manifest/lock/sync` | done |
+| `--no-deps`                    | `--deps all\|none`      | done   |
+| `--no-index`                   | `--index-mode default\|none` | done |
+| `--no-index-symbols`           | `--index-symbols on\|off` | done |
+| `--no-config` + `--config-file`| `--config auto\|none\|PATH` | done |
 
-The remaining flag renames (`--no-lock` → `--update`, `--no-deps` →
-`--deps`, etc.) change the type from bool to enum, which requires
-updating the downstream command functions that receive them. Lower
-priority — the command tree structure is the user-visible change.
+**Lessons from flag renames:**
+
+1. **String-based value_parser is simplest.** Using
+   `#[arg(value_parser = ["all", "none"])]` with a `String` field
+   is far simpler than defining clap `ValueEnum` enums for each flag.
+   Conversion to bool happens in the dispatch: `deps == "none"`.
+
+2. **Backward compat adapter pattern.** The downstream command
+   functions still take `no_lock: bool`, `no_sync: bool`, etc. The
+   dispatch converts the new flag values:
+   ```rust
+   let no_lock = update == "manifest";
+   let no_sync = update == "manifest" || update == "lock";
+   ```
+   This avoids changing the command function signatures.
+
+3. **`--config auto|none|PATH` unifies two flags.** The old
+   `--no-config` + `--config-file` are now one `--config` flag. A
+   `config_file_for_compat()` helper extracts the path for functions
+   that still expect `Option<String>`.
+
+4. **`sed` works well for mechanical renames.** Renaming
+   `no_index` → `index_mode` across 4 files was done with one sed
+   command. The pattern `if no_index` → `if index_mode == "none"`
+   was consistent everywhere.
 
 ## Actual Size (after step 5)
 
