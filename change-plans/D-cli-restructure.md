@@ -308,40 +308,77 @@ impl From<UsageAddArgs> for UsageAddOptions {
 }
 ```
 
-### Step 5: Remove CLI commands (not core logic)
+### Step 5: Remove CLI commands (DONE)
 
-Remove from the **CLI crate** only — the core `internal/commands/`
-implementations of info and sources are retained (see plan B):
+Removed from the **CLI crate**:
 
-- Remove `Command::Info` and all its subcommands from `cli.rs`
-- Remove `commands/info.rs` from the CLI crate (~700 lines)
-- Remove `Command::Sources` from `cli.rs`
-- Remove `commands/sources.rs` from the CLI crate (~122 lines)
-- Remove `Command::PrintRoot` from `cli.rs`
-- Remove `commands/root.rs` from the CLI crate (~21 lines)
-- Remove `--no-semver` flag from init
-- Remove info-related CLI types (`InfoCommandVerb`, etc.)
+- `commands/info.rs` (679 lines)
+- `commands/sources.rs` (122 lines)
+- `commands/print_root.rs` (21 lines)
+- `Command::Info` variant + ~900 lines of `InfoCommand` enum, impl,
+  verb types, and dispatch logic in `cli.rs`
+- `Command::Sources` variant + dispatch
+- `Command::PrintRoot` variant + dispatch
+- `Command::New` (hidden alias)
+- `EnvCommand::Sources` variant + dispatch
+- `SourcesOptions` struct
+- Imports for all removed command functions
 
-### Step 6: Update tests
+**Lessons from deletion:**
 
-CLI integration tests likely test the old command syntax. Update
-command invocations:
+1. **`InfoCommand` was ~900 lines alone.** The enum had 15 variants
+   (name, publisher, description, version, license, maintainer,
+   website, topic, usage, index, created, metamodel, includes-derived,
+   includes-implied, checksum), each with set/clear/add/remove sub-
+   operations, plus a 400-line `as_verb()` impl and a `numbered()`
+   method. This was by far the largest chunk of deleted code.
 
-| Old                     | New                           |
-| ----------------------- | ----------------------------- |
-| `sysand add <IRI>`      | `sysand usage add <IRI>`      |
-| `sysand remove <IRI>`   | `sysand usage remove <IRI>`   |
-| `sysand include <PATH>` | `sysand source add <PATH>`    |
-| `sysand exclude <PATH>` | `sysand source remove <PATH>` |
-| `sysand lock`           | `sysand lock update`          |
-| `sysand sync`           | `sysand env sync`             |
-| `sysand print-root`     | `sysand locate`               |
+2. **`sed` line deletion is fragile for Rust.** Deleting ranges by line
+   number left stray `#[derive(...)]` attributes and doc comments that
+   caused compilation errors (conflicting trait impls, orphaned doc
+   comments). Manual cleanup was needed after sed. For future large
+   deletions, prefer reading the exact boundaries and using Edit tool
+   with precise old_string matching.
 
-## Size Estimate
+3. **No test changes needed.** The CLI crate had no integration tests
+   for `info` or `sources` commands — those were only tested through
+   the Python binding (already updated in plan C).
 
-- `cli.rs`: Rewritten (~400 lines, down from 1634)
-- `lib.rs` dispatch: Rewritten (~100 lines, down from ~440)
-- `commands/`: Simplified wrappers (~200 lines total, down from ~1900)
-- Deleted: `info.rs` (679), `sources.rs` (122), parts of `env.rs`
-  related to `sources` subcommand
-- Net: ~1500 lines deleted
+4. **Dispatch simplification is immediate.** Removing ~160 lines of
+   Info dispatch and ~15 lines of Sources dispatch from `lib.rs` was
+   the easy part. The `cli.rs` enum + types were the bulk.
+
+### Step 6: Restructure command tree (remaining)
+
+Not yet done. The remaining changes:
+
+| Old                     | New                           | Status  |
+| ----------------------- | ----------------------------- | ------- |
+| `sysand add <IRI>`      | `sysand usage add <IRI>`      | pending |
+| `sysand remove <IRI>`   | `sysand usage remove <IRI>`   | pending |
+| `sysand include <PATH>` | `sysand source add <PATH>`    | pending |
+| `sysand exclude <PATH>` | `sysand source remove <PATH>` | pending |
+| `sysand lock`           | `sysand lock update`          | pending |
+| `sysand sync`           | `sysand env sync`             | pending |
+| `sysand print-root`     | `sysand locate`               | done    |
+| `sysand info`           | removed                       | done    |
+| `sysand sources`        | removed                       | done    |
+
+### Step 7: Rename flags (remaining)
+
+| Old               | New                  | Status  |
+| ----------------- | -------------------- | ------- |
+| `--no-semver`     | (removed)            | pending |
+| `--no-spdx`       | `--allow-non-spdx`   | pending |
+| `--no-lock/sync`  | `--update manifest…` | pending |
+| `--no-deps`       | `--deps all\|none`   | pending |
+| `--no-index`      | `--index-mode …`     | pending |
+| `--no-index-syms` | `--index-symbols …`  | pending |
+
+## Actual Size (after step 5)
+
+- `cli.rs`: 1634 → 652 lines (~60% deleted)
+- `lib.rs`: 779 → 578 lines (~25% deleted)
+- Deleted files: info.rs (679), sources.rs (122), print_root.rs (21)
+- Total: ~2000 lines deleted
+- Remaining steps 6-7 are structural renames, not deletions
