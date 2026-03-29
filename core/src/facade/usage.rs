@@ -26,11 +26,13 @@ where
 }
 
 /// Remove a usage (dependency) from the project.
-pub fn remove<P: ProjectMut>(project: &mut P, iri: &str) -> Result<(), SysandError>
+/// Returns the list of removed usages.
+pub fn remove<P: ProjectMut>(
+    project: &mut P,
+    iri: &str,
+) -> Result<Vec<InterchangeProjectUsageRaw>, SysandError>
 where
     P::Error: Into<SysandError>,
 {
-    crate::commands::remove::do_remove(project, iri)
-        .map(|_| ()) // discard removed usages list
-        .map_err(SysandError::from)
+    crate::commands::remove::do_remove(project, iri).map_err(SysandError::from)
 }

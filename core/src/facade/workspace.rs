@@ -34,7 +34,7 @@ pub fn build(
     let compression = crate::facade::build::compression_to_internal(opts.compression)?;
 
     let kpars =
-        crate::commands::build::do_build_workspace_kpars(workspace, output_path, compression, true, false)
+        crate::commands::build::do_build_workspace_kpars(workspace, output_path, compression, true, opts.allow_path_usage)
             .map_err(SysandError::from)?;
 
     kpars

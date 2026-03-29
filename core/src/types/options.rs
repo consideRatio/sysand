@@ -51,6 +51,7 @@ pub struct UsageAddOptions {
 pub struct BuildOptions {
     pub target: Option<Utf8PathBuf>,
     pub compression: Compression,
+    pub allow_path_usage: bool,
 }
 
 /// Options for `lock::update`.

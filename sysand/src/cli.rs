@@ -286,6 +286,24 @@ impl From<KparCompressionMethodCli> for KparCompressionMethod {
     }
 }
 
+impl From<KparCompressionMethodCli> for sysand_core::types::enums::Compression {
+    fn from(value: KparCompressionMethodCli) -> Self {
+        use sysand_core::types::enums::Compression;
+        match value {
+            KparCompressionMethodCli::Stored => Compression::Stored,
+            KparCompressionMethodCli::Deflated => Compression::Deflated,
+            #[cfg(feature = "kpar-bzip2")]
+            KparCompressionMethodCli::Bzip2 => Compression::Bzip2,
+            #[cfg(feature = "kpar-zstd")]
+            KparCompressionMethodCli::Zstd => Compression::Zstd,
+            #[cfg(feature = "kpar-xz")]
+            KparCompressionMethodCli::Xz => Compression::Xz,
+            #[cfg(feature = "kpar-ppmd")]
+            KparCompressionMethodCli::Ppmd => Compression::Ppmd,
+        }
+    }
+}
+
 // This is implemented mainly so that if KparCompressionMethod gets a new member
 // and KparCompressionMethodCli isn't updated it would give a compilation error
 impl From<KparCompressionMethod> for KparCompressionMethodCli {

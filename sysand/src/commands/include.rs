@@ -3,8 +3,14 @@
 
 use anyhow::{Result, bail};
 use camino::Utf8PathBuf;
-// use glob::glob;
-use sysand_core::{context::ProjectContext, include::do_include, project::utils::wrapfs};
+use sysand_core::{
+    context::ProjectContext,
+    project::utils::wrapfs,
+    types::{
+        enums::{ChecksumMode, IndexSymbols},
+        options::SourceAddOptions,
+    },
+};
 
 use crate::CliError;
 
@@ -24,12 +30,14 @@ pub fn command_include(
         }
         let unix_path = current_project.get_unix_path(file)?;
 
-        do_include(
+        sysand_core::facade::source::add(
             &mut current_project,
-            unix_path,
-            compute_checksum,
-            index_symbols,
-            None,
+            &unix_path,
+            SourceAddOptions {
+                checksum: if compute_checksum { ChecksumMode::Sha256 } else { ChecksumMode::None },
+                index_symbols: if index_symbols { IndexSymbols::On } else { IndexSymbols::Off },
+                ..Default::default()
+            },
         )?;
     }
 

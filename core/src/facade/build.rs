@@ -22,7 +22,7 @@ where
 {
     let compression = compression_to_internal(opts.compression)?;
 
-    let kpar = do_build_kpar(project, output_path, compression, true, false)
+    let kpar = do_build_kpar(project, output_path, compression, true, opts.allow_path_usage)
         .map_err(SysandError::from)?;
 
     // Extract project info from the built KPAR

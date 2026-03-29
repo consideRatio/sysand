@@ -1,18 +1,20 @@
 // SPDX-FileCopyrightText: © 2025 Sysand contributors <opensource@sensmetry.com>
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use crate::CliError;
 use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
-use sysand_core::project::{local_src::LocalSrcProject, utils::wrapfs};
+use sysand_core::{
+    project::{local_src::LocalSrcProject, utils::wrapfs},
+    types::options::InitOptions,
+};
 
-const DEFAULT_VERSION: &str = "0.0.1";
+use crate::CliError;
 
 pub fn command_init(
     name: Option<String>,
     publisher: Option<String>,
     version: Option<String>,
-    no_semver: bool,
+    _no_semver: bool,
     license: Option<String>,
     no_spdx: bool,
     path: Option<String>,
@@ -20,27 +22,27 @@ pub fn command_init(
     let path = match path {
         Some(p) => {
             wrapfs::create_dir_all(&p)?;
-
-            p.into()
+            Utf8PathBuf::from(p)
         }
         None => Utf8PathBuf::from("."),
     };
-    let version = version.unwrap_or_else(|| DEFAULT_VERSION.to_owned());
     let name = match name {
-        Some(n) => n,
-        None => default_name_from_path(&path)?,
+        Some(n) => Some(n),
+        None => Some(default_name_from_path(&path)?),
     };
 
-    sysand_core::init::do_init_ext(
-        name,
-        publisher,
-        version,
-        no_semver,
-        license,
-        no_spdx,
-        &mut LocalSrcProject {
-            nominal_path: None,
-            project_path: path,
+    let mut project = LocalSrcProject {
+        nominal_path: None,
+        project_path: path,
+    };
+    sysand_core::facade::init::init(
+        &mut project,
+        InitOptions {
+            name,
+            publisher,
+            version,
+            license,
+            allow_non_spdx: !no_spdx,
         },
     )?;
     Ok(())
