@@ -348,32 +348,58 @@ Removed from the **CLI crate**:
    Info dispatch and ~15 lines of Sources dispatch from `lib.rs` was
    the easy part. The `cli.rs` enum + types were the bulk.
 
-### Step 6: Restructure command tree (remaining)
+### Step 6: Restructure command tree (DONE)
 
-Not yet done. The remaining changes:
+| Old                     | New                           | Status |
+| ----------------------- | ----------------------------- | ------ |
+| `sysand add <IRI>`      | `sysand usage add <IRI>`      | done   |
+| `sysand remove <IRI>`   | `sysand usage remove <IRI>`   | done   |
+| `sysand include <PATH>` | `sysand source add <PATH>`    | done   |
+| `sysand exclude <PATH>` | `sysand source remove <PATH>` | done   |
+| `sysand lock`           | `sysand lock update`          | done   |
+| `sysand sync`           | `sysand env sync`             | done   |
+| `sysand print-root`     | `sysand locate`               | done   |
+| `sysand info`           | removed                       | done   |
+| `sysand sources`        | removed                       | done   |
 
-| Old                     | New                           | Status  |
-| ----------------------- | ----------------------------- | ------- |
-| `sysand add <IRI>`      | `sysand usage add <IRI>`      | pending |
-| `sysand remove <IRI>`   | `sysand usage remove <IRI>`   | pending |
-| `sysand include <PATH>` | `sysand source add <PATH>`    | pending |
-| `sysand exclude <PATH>` | `sysand source remove <PATH>` | pending |
-| `sysand lock`           | `sysand lock update`          | pending |
-| `sysand sync`           | `sysand env sync`             | pending |
-| `sysand print-root`     | `sysand locate`               | done    |
-| `sysand info`           | removed                       | done    |
-| `sysand sources`        | removed                       | done    |
+New sub-enums added: `SourceCommand`, `UsageCommand`, `LockCommand`.
+`Sync` moved from top-level `Command::Sync` into `EnvCommand::Sync`.
+`Locate` added as new top-level command using `facade::locate`.
 
-### Step 7: Rename flags (remaining)
+**Lessons from command tree restructure:**
+
+1. **Clap sub-enums work cleanly.** `#[command(subcommand)]` on the
+   parent variant + a new `#[derive(clap::Subcommand)]` enum gives
+   `sysand source add` and `sysand usage remove` naturally.
+
+2. **Dispatch match arms need careful parenthesization.** The old
+   `Command::Add { fields }` becomes
+   `Command::Usage(cli::UsageCommand::Add { fields })` — extra
+   parens around the inner match. Easy to get wrong.
+
+3. **Moving Sync into EnvCommand was clean.** The entire Sync dispatch
+   block (lockfile reading, conditional lock creation, sync call) moved
+   verbatim into `Some(cli::EnvCommand::Sync { ... }) =>`.
+
+4. **`locate` uses the facade directly.** First CLI command to call a
+   facade function (`sysand_core::facade::locate::locate`). The others
+   still call `command_*` functions for now.
+
+### Step 7: Rename flags (partial)
 
 | Old               | New                  | Status  |
 | ----------------- | -------------------- | ------- |
-| `--no-semver`     | (removed)            | pending |
-| `--no-spdx`       | `--allow-non-spdx`   | pending |
+| `--no-semver`     | (removed)            | done    |
+| `--no-spdx`       | `--allow-non-spdx`   | done    |
 | `--no-lock/sync`  | `--update manifest…` | pending |
 | `--no-deps`       | `--deps all\|none`   | pending |
 | `--no-index`      | `--index-mode …`     | pending |
 | `--no-index-syms` | `--index-symbols …`  | pending |
+
+The remaining flag renames (`--no-lock` → `--update`, `--no-deps` →
+`--deps`, etc.) change the type from bool to enum, which requires
+updating the downstream command functions that receive them. Lower
+priority — the command tree structure is the user-visible change.
 
 ## Actual Size (after step 5)
 
