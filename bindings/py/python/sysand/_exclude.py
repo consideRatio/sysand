@@ -13,7 +13,7 @@ def exclude(
     path: Path | str,
     src_path: str | Path,
 ) -> None:
-    sysand_rs.do_exclude_py(str(path), str(src_path))
+    sysand_rs.source_remove(str(path), str(src_path))
 
 
 __all__ = ["exclude"]

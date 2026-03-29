@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 def add(path: Path | str, iri: str, version: str | None = None) -> None:
-    sysand_rs.do_add_py(str(path), iri, version)
+    sysand_rs.usage_add(str(path), iri, version_req=version)
 
 
 __all__ = ["add"]

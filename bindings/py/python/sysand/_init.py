@@ -9,11 +9,17 @@ import sysand._sysand_core as sysand_rs  # type: ignore
 from pathlib import Path
 
 
-def init(name: str, publisher: str, version: str, path: str | Path = ".") -> None:
+def init(
+    name: str,
+    publisher: str,
+    version: str,
+    path: str | Path = ".",
+    license: str | None = None,
+) -> None:
     if not Path(path).exists():
         Path(path).mkdir()
 
-    sysand_rs.do_init_py_local_file(name, publisher, version, str(path))
+    sysand_rs.init(str(path), name=name, publisher=publisher, version=version, license=license)
 
 
 __all__ = ["init"]

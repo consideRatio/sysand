@@ -17,7 +17,7 @@ def sources(
     include_deps: bool = True,
     include_std: bool = False,
 ) -> List[Path]:
-    return sysand_rs.do_sources_env_py(  # type: ignore
+    return sysand_rs.sources_env(  # type: ignore
         str(env_path), iri, version, include_deps, include_std
     )
 

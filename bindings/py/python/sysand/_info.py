@@ -16,7 +16,7 @@ from os import getcwd
 def info_path(
     path: str | Path = ".",
 ) -> typing.Tuple[InterchangeProjectInfo, InterchangeProjectMetadata] | None:
-    return sysand_rs.do_info_py_path(str(path))  # type: ignore
+    return sysand_rs.info_path(str(path))  # type: ignore
 
 
 def info(
@@ -31,7 +31,7 @@ def info(
     if isinstance(index_urls, str):
         index_urls = [index_urls]
 
-    return sysand_rs.do_info_py(uri, relative_file_root, index_urls)  # type: ignore
+    return sysand_rs.info_remote(uri, relative_file_root, index_urls)  # type: ignore
 
 
 __all__ = [

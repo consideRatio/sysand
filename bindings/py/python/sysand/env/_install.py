@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 def install_path(env_path: str | Path, iri: str, location: str | Path) -> None:
-    sysand_rs.do_env_install_path_py(str(env_path), iri, str(location))
+    sysand_rs.env_install_path(str(env_path), iri, str(location))
 
 
 __all__ = ["install_path"]

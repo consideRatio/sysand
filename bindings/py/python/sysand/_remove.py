@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 def remove(path: Path | str, iri: str) -> None:
-    sysand_rs.do_remove_py(str(path), iri)
+    sysand_rs.usage_remove(str(path), iri)
 
 
 __all__ = ["remove"]

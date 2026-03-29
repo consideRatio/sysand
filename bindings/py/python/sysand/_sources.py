@@ -19,7 +19,7 @@ def sources(
     if env_path is not None:
         env_path = str(env_path)
 
-    return sysand_rs.do_sources_project_py(  # type: ignore
+    return sysand_rs.sources_project(  # type: ignore
         str(path), include_deps, env_path, include_std
     )
 

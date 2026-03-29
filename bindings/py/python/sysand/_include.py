@@ -18,8 +18,8 @@ def include(
     index_symbols: bool = True,
     force_format: Literal["sysml", "kerml"] | None = None,
 ) -> None:
-    sysand_rs.do_include_py(
-        str(path), str(src_path), compute_checksum, index_symbols, force_format
+    sysand_rs.source_add(
+        str(path), str(src_path), checksum=compute_checksum, index_symbols=index_symbols, language=force_format
     )
 
 

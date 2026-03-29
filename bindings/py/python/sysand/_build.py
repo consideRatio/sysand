@@ -16,7 +16,7 @@ def build(
 
     # comp = None if compression is None else _convert_compression(compression)
     comp = None if compression is None else compression.name
-    sysand_rs.do_build_py(str(output_path), project_path, comp)
+    sysand_rs.build(project_path, str(output_path), compression=comp)
 
 
 __all__ = [
