@@ -202,10 +202,14 @@ pub extern "system" fn Java_com_sensmetry_sysand_SysandClient_init(
         let path = env.get_string_required(&path)?;
         let opts = InitOptions::from_jobject(&mut env, &opts)?;
         let mut project = LocalSrcProject::open(&path)?;
-        sysand_core::init(&mut project, opts)
+        sysand_core::facade::init::init(&mut project, opts)
     });
 }
 ```
+
+Note: facade functions are at `sysand_core::facade::init::init`, not
+`sysand_core::init`. The flat re-export happens later when existing
+code moves to `internal/`.
 
 **Java side:**
 
@@ -385,6 +389,38 @@ tests for newly-bound commands.
 Net: Java and Python shrink (simpler error handling, facade does the
 work). JS grows (many more commands bound).
 
+## Lessons from Plan B Implementation
+
+The facade shape has implications for bindings:
+
+1. **Facade functions are generic over storage.** e.g.,
+   `facade::init::init<P: ProjectMut>` with
+   `where P::Error: Into<SysandError>`. Bindings resolve the generic
+   by constructing the concrete storage type (`LocalSrcProject` for
+   filesystem, `ProjectLocalBrowserStorage` for browser). The generic
+   is invisible to the host language user.
+
+2. **`NetworkContext<Policy>` is generic over auth policy.** Bindings
+   must pick a concrete auth type. For Java/Python (CLI-like), this is
+   `StandardHTTPAuthentication`. The binding constructs `NetworkContext`
+   once and holds it.
+
+3. **`lock::update` takes a pre-built resolver.** The resolver assembly
+   logic (`get_overrides`, priority chain) currently lives in the CLI
+   crate. Bindings that need lock/sync must either:
+   - Duplicate the ~50-line resolver assembly, or
+   - Use a shared helper (consider moving `get_overrides` + resolver
+     assembly to core as a `build_default_resolver(net)` helper)
+
+4. **`env::sync` hides the 13-param `do_sync`.** Bindings just pass
+   `NetworkContext` + lock + env. This is the biggest simplification.
+
+5. **`env::install_project` and `clone::clone_project` are building
+   blocks.** The full "install with deps" orchestration (resolve +
+   lock + sync) would need to be reimplemented in each binding if they
+   want to support it. Consider adding a `facade::env::install_with_deps`
+   that composes the building blocks.
+
 ## Risks
 
 - **Java accessor chain:** `client.source().add()` requires inner
@@ -398,3 +434,7 @@ work). JS grows (many more commands bound).
 - **Python submodule import:** PyO3 submodules need `sys.modules`
   registration for `from sysand.source import add` to work. Known
   pattern but requires explicit setup.
+
+- **Resolver assembly duplication:** If bindings want lock/sync, they
+  need the resolver assembly logic. Currently CLI-only. Consider
+  moving to core or providing a default builder.

@@ -247,19 +247,33 @@ struct IndexArgs {
 
 ### Step 3: Simplify dispatch (`lib.rs`)
 
-Replace the ~440-line match block. With the facade doing the heavy
-lifting, each arm becomes 3-5 lines:
+Replace the ~440-line match block. Each arm becomes 3-10 lines:
 
 1. Discover context (if needed)
 2. Convert CLI args to facade options struct
-3. Call facade function
-4. Render output (if any)
+3. For network commands: build `NetworkContext` + resolver
+4. Call facade function
+5. Render output (if any)
 
-The shared setup (config loading, auth, HTTP client, tokio runtime)
-that currently lives in the dispatch function moves into the facade.
-The CLI only handles:
+**Important nuance from implementation:** The CLI still owns:
+
+- `NetworkContext` construction (config + auth from env vars + HTTP
+  client + tokio runtime)
+- Resolver assembly for `lock::update` (the `get_overrides` +
+  `create_resolver` logic stays in CLI for now)
+- Complex orchestrations like "install with deps" (resolve → lock →
+  sync)
+
+So dispatch isn't *quite* as thin as originally planned for network
+commands. Tier-1 commands (init, build, source, usage) become truly
+3-5 lines. Tier-2 commands (lock, sync, clone, env install) are
+10-20 lines with infrastructure setup.
+
+The CLI handles:
 
 - Implicit CWD discovery → `ProjectContext`
+- `SYSAND_CRED_*` env vars → auth policy → `NetworkContext`
+- Config loading → `Config` → `NetworkContext`
 - `--log-level` → logging setup
 - `--format` → output rendering
 - Exit codes
