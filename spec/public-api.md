@@ -278,11 +278,11 @@ Project operations live at the root level — no `project` namespace.
 
 | Command   | CLI                                               | Rust                                                          | Java                                     | JS/WASM                                 | Python                                   |
 | --------- | ------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------- | --------------------------------------- | ---------------------------------------- |
-| create    | `sysand env create [opts]`                        | `env::create(EnvCreateOptions) → Result<()>`                  | `client.env().create(opts)`              | `sysand.env.create(opts?)`              | `sysand.env.create(**opts)`              |
+| create    | `sysand env create [opts]`                        | `env::create(&ctx, EnvCreateOptions) → Result<()>`            | `client.env().create(ctx, opts)`         | `sysand.env.create(ctx, opts?)`         | `sysand.env.create(ctx, **opts)`         |
 | sync      | `sysand env sync [opts]`                          | `env::sync(&ctx, EnvSyncOptions) → Result<()>`                | `client.env().sync(ctx, opts)`           | `sysand.env.sync(ctx, opts?)`           | `sysand.env.sync(ctx, **opts)`           |
 | install   | `sysand env install <IRI> [VERSION_REQ] [opts]`   | `env::install(&ctx, iri, EnvInstallOptions) → Result<()>`     | `client.env().install(ctx, iri, opts)`   | `sysand.env.install(ctx, iri, opts?)`   | `sysand.env.install(ctx, iri, **opts)`   |
 | uninstall | `sysand env uninstall <IRI> [VERSION_REQ] [opts]` | `env::uninstall(&ctx, iri, EnvUninstallOptions) → Result<()>` | `client.env().uninstall(ctx, iri, opts)` | `sysand.env.uninstall(ctx, iri, opts?)` | `sysand.env.uninstall(ctx, iri, **opts)` |
-| list      | `sysand env list [opts]`                          | `env::list(EnvListOptions) → Result<Vec<EnvEntry>>`           | `client.env().list(opts)`                | `sysand.env.list(opts?)`                | `sysand.env.list(**opts)`                |
+| list      | `sysand env list [opts]`                          | `env::list(&ctx, EnvListOptions) → Result<Vec<EnvEntry>>`     | `client.env().list(ctx, opts)`           | `sysand.env.list(ctx, opts?)`           | `sysand.env.list(ctx, **opts)`           |
 
 ### workspace
 

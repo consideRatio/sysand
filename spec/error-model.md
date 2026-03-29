@@ -68,6 +68,13 @@ pub enum ErrorCode {
     // Lock
     LockStale,
 
+    // Resolution
+    ResolutionFailed,
+    IriInvalid,
+
+    // Auth
+    AuthFailed,
+
     // Generic
     IoError,
     Internal,
