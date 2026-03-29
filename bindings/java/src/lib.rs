@@ -19,7 +19,7 @@ use sysand_core::{
 };
 
 use crate::{
-    conversion::{ToJObject, ToJObjectArray, java_map_to_index_map},
+    conversion::{ToJObjectArray, java_map_to_index_map},
     exceptions::JniExt,
 };
 

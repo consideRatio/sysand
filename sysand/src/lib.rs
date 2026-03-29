@@ -31,7 +31,6 @@ use sysand_core::{
     context::ProjectContext,
     discover::{discover_project, discover_workspace},
     env::local_directory::{DEFAULT_ENV_NAME, LocalDirectoryEnvironment},
-    init::InitError,
     lock::Lock,
     project::{
         any::{AnyProject, OverrideProject},

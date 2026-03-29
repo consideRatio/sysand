@@ -1,16 +1,11 @@
 // SPDX-FileCopyrightText: © 2025 Sysand contributors <opensource@sensmetry.com>
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use std::{
-    convert::Infallible,
-    ffi::OsStr,
-    fmt::{Display, Write},
-};
+use std::fmt::Display;
 
 use camino::Utf8PathBuf;
-use clap::{ValueEnum, builder::StyledStr, crate_authors};
+use clap::{ValueEnum, crate_authors};
 use fluent_uri::Iri;
-use semver::VersionReq;
 use sysand_core::build::KparCompressionMethod;
 
 use crate::env_vars;
@@ -310,51 +305,6 @@ impl From<KparCompressionMethod> for KparCompressionMethodCli {
     }
 }
 
-#[derive(Clone, Debug)]
-struct InvalidCommand {
-    message: String,
-}
-
-fn invalid_command<S: AsRef<str>>(message: S) -> InvalidCommand {
-    InvalidCommand {
-        message: message.as_ref().to_string(),
-    }
-}
-
-impl clap::builder::TypedValueParser for InvalidCommand {
-    type Value = Infallible;
-
-    fn parse_ref(
-        &self,
-        cmd: &clap::Command,
-        arg: Option<&clap::Arg>,
-        value: &OsStr,
-    ) -> Result<Self::Value, clap::Error> {
-        let mut err = clap::Error::new(clap::error::ErrorKind::UnknownArgument).with_cmd(cmd);
-        if let Some(arg) = arg {
-            err.insert(
-                clap::error::ContextKind::InvalidArg,
-                clap::error::ContextValue::String(arg.to_string()),
-            );
-        }
-        err.insert(
-            clap::error::ContextKind::InvalidValue,
-            clap::error::ContextValue::String(value.to_string_lossy().to_string()),
-        );
-
-        // NOTE: https://github.com/clap-rs/clap/discussions/5318
-        // Only works with StyledStrs
-        let mut styled = StyledStr::new();
-        styled.write_str(&self.message)?;
-        err.insert(
-            clap::error::ContextKind::Suggested,
-            clap::error::ContextValue::StyledStrs(vec![styled]),
-        );
-
-        Err(err)
-    }
-}
-
 #[derive(clap::Subcommand, Debug, Clone)]
 pub enum EnvCommand {
     /// Sync `sysand_env` to lockfile
@@ -521,20 +471,6 @@ pub struct GlobalOptions {
     pub help: Option<bool>,
 }
 
-/// Parse an IRI. Tolerates missing IRI scheme, uses
-/// `https://` scheme in that case.
-fn parse_https_iri(s: &str) -> Result<fluent_uri::Iri<String>, fluent_uri::ParseError> {
-    use fluent_uri::Iri;
-
-    Iri::parse(s).map(Into::into).or_else(|original_err| {
-        let scheme = "https://";
-        let mut https = String::with_capacity(scheme.len() + s.len());
-        https.push_str(scheme);
-        https.push_str(s);
-        // Return the original error to not confuse the user
-        Iri::parse(https).map_err(|_| original_err)
-    })
-}
 
 // Default metamodel for .kpar archives is KerML according to spec.
 // But for non-packaged projects there is no default.

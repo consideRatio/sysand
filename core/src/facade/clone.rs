@@ -11,7 +11,9 @@
 //! the building blocks — callers compose `lock::update` + `env::sync`
 //! after cloning the project files.
 
+#[cfg(feature = "filesystem")]
 use crate::error::{ErrorCode, SysandError};
+#[cfg(feature = "filesystem")]
 use crate::project::ProjectRead;
 
 /// Clone a resolved project's files into a target directory.

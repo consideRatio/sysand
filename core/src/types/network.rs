@@ -11,8 +11,10 @@
 //! Non-network commands (init, build, source add/remove, etc.) do not
 //! take a `NetworkContext`.
 
+#[cfg(feature = "networking")]
 use std::sync::Arc;
 
+#[cfg(feature = "networking")]
 use crate::config::Config;
 
 /// Network infrastructure for commands that access remote resources.

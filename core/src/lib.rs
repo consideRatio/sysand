@@ -8,6 +8,7 @@ pub use error::{ErrorCode, SysandError};
 
 pub mod types;
 pub mod facade;
+mod internal; // boundary documentation only — see internal.rs
 
 pub mod commands;
 pub use commands::*;
