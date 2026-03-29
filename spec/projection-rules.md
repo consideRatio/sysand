@@ -81,7 +81,7 @@ No universal wrapper types.
 | Rust    | `Result<T, SysandError>` with `ErrorCode` enum  |
 | Java    | throws `SysandException` with `ErrorCode` field |
 | JS/WASM | throws `SysandError` with `code` property       |
-| Python  | raises `SysandError` subclass per code          |
+| Python  | raises `SysandError` with `code: ErrorCode` enum |
 
 Error codes are the same enum everywhere. No per-command exception
 classes.

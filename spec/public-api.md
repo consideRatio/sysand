@@ -200,7 +200,7 @@ See `error-model.md`. All operations return errors through this type.
 | Rust    | `Result<T, SysandError>`                        |
 | Java    | throws `SysandException` with `ErrorCode` field |
 | JS/WASM | throws `SysandError` with `code` property       |
-| Python  | raises `SysandError` subclass per code          |
+| Python  | raises `SysandError` with `code: ErrorCode` enum |
 
 ### BuildOutput
 

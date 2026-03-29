@@ -20,7 +20,7 @@ the error. Optional because some errors are context-free.
 | Rust    | `Result<T, SysandError>` with `ErrorCode` enum                        |
 | Java    | throws `SysandException` with `ErrorCode` field                       |
 | JS/WASM | throws `SysandError` with `code` property (`"kebab-case"` string)     |
-| Python  | raises `SysandError` subclass per code (`ProjectNotFoundError`, etc.) |
+| Python  | raises `SysandError` with `code` attribute (`ErrorCode` enum)        |
 
 Error codes are the same enum everywhere. No per-command exception
 classes.
@@ -108,9 +108,10 @@ diagnostic detail.
 errors with `?` and do not branch on `ErrorCode`. The only places
 that inspect the code are:
 
-- **Binding layers** — to map `ErrorCode` to the surface's exception
-  type (e.g., `IoError` → `PyIOError`, `SchemaInvalid` →
-  `PyValueError`).
+- **Binding layers** — to map `ErrorCode` to the surface's error
+  representation (e.g., Java `SysandException` with `ErrorCode` enum,
+  Python `SysandError` with `code` string, JS thrown object with
+  `code` property).
 - **Infrastructure code** — `std::io::ErrorKind` matches for
   expected conditions (file-not-found → return `Ok(false)`,
   cross-device rename → fallback to copy). These happen *before*
@@ -123,8 +124,10 @@ classes (e.g., `ProjectInitError`, `UsageAddError`) multiply the error
 surface across four binding surfaces and make catch-site code fragile —
 callers need to know which exception each command throws. A single
 `SysandError` with a flat `ErrorCode` enum projects cleanly everywhere:
-one exception class in Java, one error type in JS, subclasses per code
-in Python. Callers match on the code, not the command.
+one exception class in Java, one error type in JS, one exception class
+in Python. Callers match on the code, not the command. Per-code
+subclasses can be added later (especially in Python) without breaking
+existing catch sites.
 
 **Why the same codes everywhere.** The error code enum is identical
 across all surfaces so that documentation, logging, and user-facing
