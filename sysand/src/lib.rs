@@ -45,7 +45,7 @@ use sysand_core::{
 use url::Url;
 
 use crate::{
-    cli::{Args, Command, InfoCommand},
+    cli::{Args, Command},
     commands::{
         add::command_add,
         build::{command_build_for_project, command_build_for_workspace},
@@ -55,12 +55,9 @@ use crate::{
         },
         exclude::command_exclude,
         include::command_include,
-        info::{command_info_current_project, command_info_path, command_info_verb_path},
         init::command_init,
         lock::command_lock,
-        print_root::command_print_root,
         remove::command_remove,
-        sources::{command_sources_env, command_sources_project},
         sync::command_sync,
     },
 };
@@ -278,7 +275,6 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
             license,
             no_spdx,
         } => command_init(name, publisher, version, no_semver, license, no_spdx, path),
-        Command::New { .. } => bail!("use `init` instead of `new`"),
         Command::Env { command } => match command {
             None => {
                 let env_dir = {
@@ -334,30 +330,6 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                 }
             },
             Some(cli::EnvCommand::List) => command_env_list(current_environment),
-            Some(cli::EnvCommand::Sources {
-                iri,
-                version,
-                sources_opts,
-            }) => {
-                let cli::SourcesOptions {
-                    no_deps,
-                    include_std,
-                } = sources_opts;
-                let provided_iris = if !include_std {
-                    known_std_libs()
-                } else {
-                    HashMap::default()
-                };
-
-                command_sources_env(
-                    iri,
-                    version,
-                    !no_deps,
-                    current_environment,
-                    &provided_iris,
-                    include_std,
-                )
-            }
         },
         Command::Lock { resolution_opts } => {
             if let Some(project_root) = project_root {
@@ -425,165 +397,6 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                 runtime,
                 basic_auth_policy,
             )
-        }
-        Command::PrintRoot => command_print_root(cwd),
-        Command::Info {
-            path,
-            iri,
-            auto_location,
-            no_normalise,
-            resolution_opts,
-            subcommand,
-        } => {
-            let cli::ResolutionOptions {
-                index,
-                default_index,
-                no_index,
-                include_std,
-            } = resolution_opts;
-            let index_urls = if no_index {
-                None
-            } else {
-                Some(config.index_urls(
-                    index,
-                    vec![DEFAULT_INDEX_URL.to_string()],
-                    default_index,
-                )?)
-            };
-            let excluded_iris: HashSet<_> = if !include_std {
-                // Only print std warning when command is to print all info
-                // or just usages.
-                // These are the only cases where stdlib usages affect output
-                match subcommand {
-                    None
-                    | Some(InfoCommand::Usage {
-                        clear: None,
-                        add: None,
-                        set: None,
-                        remove: None,
-                        numbered: _,
-                    }) => crate::logger::warn_std_deps(),
-                    _ => (),
-                }
-                known_std_libs().into_keys().collect()
-            } else {
-                HashSet::default()
-            };
-
-            let project_root = project_root.unwrap_or(cwd);
-            let overrides = get_overrides(
-                &config,
-                &project_root,
-                &client,
-                runtime.clone(),
-                basic_auth_policy.clone(),
-            )?;
-
-            enum Location {
-                WorkDir,
-                Iri(fluent_uri::Iri<String>),
-                Path(Utf8PathBuf),
-            }
-
-            let location = if let Some(auto_location) = auto_location {
-                debug_assert!(path.is_none());
-                debug_assert!(iri.is_none());
-
-                if let Ok(iri) = fluent_uri::Iri::parse(auto_location.clone()) {
-                    Location::Iri(iri)
-                } else {
-                    Location::Path(auto_location.into())
-                }
-            } else if let Some(path) = path {
-                debug_assert!(auto_location.is_none());
-                debug_assert!(iri.is_none());
-
-                Location::Path(path)
-            } else if let Some(iri) = iri {
-                debug_assert!(path.is_none());
-                debug_assert!(auto_location.is_none());
-
-                Location::Iri(iri)
-            } else {
-                Location::WorkDir
-            };
-
-            match (location, subcommand) {
-                (Location::WorkDir, subcommand) => {
-                    if let Some(current_project) = ctx.current_project {
-                        match subcommand {
-                            Some(subcommand) => {
-                                match subcommand {
-                                    cli::InfoCommand::Version {
-                                        ref set, no_semver, ..
-                                    } => {
-                                        if !no_semver && let Some(v) = set {
-                                            semver::Version::parse(v).map_err(|e| {
-                                                InitError::<std::convert::Infallible>::SemVerParse(
-                                                    v.as_str().into(),
-                                                    e,
-                                                )
-                                            })?;
-                                        }
-                                    }
-                                    cli::InfoCommand::License {
-                                        ref set, no_spdx, ..
-                                    } => {
-                                        if !no_spdx && let Some(l) = set {
-                                            spdx::Expression::parse(l).map_err(|e| {
-                                                InitError::<std::convert::Infallible>::SPDXLicenseParse(l.as_str().into(), e)
-                                            })?;
-                                        }
-                                    }
-                                    _ => (),
-                                }
-
-                                let numbered = subcommand.numbered();
-                                command_info_current_project(
-                                    current_project,
-                                    subcommand.as_verb(),
-                                    numbered,
-                                )
-                            }
-                            None => command_info_path(current_project.root_path(), &excluded_iris),
-                        }
-                    } else {
-                        bail!(
-                            "run outside of an active project, did you mean to use `--path` or `--iri`?"
-                        )
-                    }
-                }
-                (Location::Iri(iri), None) => crate::commands::info::command_info_uri(
-                    iri,
-                    !no_normalise,
-                    client,
-                    index_urls,
-                    &excluded_iris,
-                    overrides,
-                    runtime,
-                    basic_auth_policy,
-                ),
-                (Location::Iri(iri), Some(subcommand)) => {
-                    let numbered = subcommand.numbered();
-
-                    crate::commands::info::command_info_verb_uri(
-                        iri,
-                        subcommand.as_verb(),
-                        numbered,
-                        client,
-                        index_urls,
-                        overrides,
-                        runtime,
-                        basic_auth_policy,
-                    )
-                }
-                (Location::Path(path), None) => command_info_path(&path, &excluded_iris),
-                (Location::Path(path), Some(subcommand)) => {
-                    let numbered = subcommand.numbered();
-
-                    command_info_verb_path(&path, subcommand.as_verb(), numbered)
-                }
-            }
         }
         Command::Add {
             locator,
@@ -673,20 +486,6 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                     allow_path_usage,
                 )
             }
-        }
-        Command::Sources { sources_opts } => {
-            let cli::SourcesOptions {
-                no_deps,
-                include_std,
-            } = sources_opts;
-            let provided_iris = if !include_std {
-                crate::logger::warn_std_omit();
-                known_std_libs()
-            } else {
-                HashMap::default()
-            };
-
-            command_sources_project(!no_deps, ctx, current_environment, &provided_iris)
         }
         Command::Clone {
             locator,
