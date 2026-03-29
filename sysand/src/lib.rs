@@ -271,10 +271,15 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
             name,
             publisher,
             version,
-            no_semver,
             license,
-            no_spdx,
-        } => command_init(name, publisher, version, no_semver, license, no_spdx, path),
+            allow_non_spdx,
+        } => command_init(name, publisher, version, false, license, !allow_non_spdx, path),
+        Command::Locate => {
+            let root = sysand_core::facade::locate::locate(&cwd)?;
+            let canonical = wrapfs::canonicalize(&root)?;
+            println!("{canonical}");
+            Ok(())
+        }
         Command::Env { command } => match command {
             None => {
                 let env_dir = {
@@ -330,8 +335,55 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                 }
             },
             Some(cli::EnvCommand::List) => command_env_list(current_environment),
+            Some(cli::EnvCommand::Sync { resolution_opts }) => {
+                let mut local_environment = match current_environment {
+                    Some(env) => env,
+                    None => command_env(project_root.as_ref().unwrap_or(&cwd).join(DEFAULT_ENV_NAME))?,
+                };
+
+                let provided_iris = if !resolution_opts.include_std {
+                    crate::logger::warn_std_deps();
+                    known_std_libs()
+                } else {
+                    HashMap::default()
+                };
+
+                let project_root = project_root.unwrap_or(cwd);
+                let lockfile = project_root.join(DEFAULT_LOCKFILE_NAME);
+                let lock = match fs::read_to_string(&lockfile) {
+                    Ok(l) => match Lock::from_str(&l) {
+                        Ok(l) => l,
+                        Err(e) => bail!("invalid lockfile `{lockfile}`:\n{e}"),
+                    },
+                    Err(e) => {
+                        if e.kind() == ErrorKind::NotFound {
+                            command_lock(
+                                ".",
+                                resolution_opts,
+                                &config,
+                                &project_root,
+                                client.clone(),
+                                runtime.clone(),
+                                basic_auth_policy.clone(),
+                                ctx,
+                            )?
+                        } else {
+                            bail!("failed to read lockfile `{lockfile}`: {e}")
+                        }
+                    }
+                };
+                command_sync(
+                    &lock,
+                    project_root,
+                    &mut local_environment,
+                    client,
+                    &provided_iris,
+                    runtime,
+                    basic_auth_policy,
+                )
+            }
         },
-        Command::Lock { resolution_opts } => {
+        Command::Lock(cli::LockCommand::Update { resolution_opts }) => {
             if let Some(project_root) = project_root {
                 crate::commands::lock::command_lock(
                     ".",
@@ -350,62 +402,14 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                 )
             }
         }
-        Command::Sync { resolution_opts } => {
-            let mut local_environment = match current_environment {
-                Some(env) => env,
-                None => command_env(project_root.as_ref().unwrap_or(&cwd).join(DEFAULT_ENV_NAME))?,
-            };
-
-            let provided_iris = if !resolution_opts.include_std {
-                crate::logger::warn_std_deps();
-                known_std_libs()
-            } else {
-                HashMap::default()
-            };
-
-            let project_root = project_root.unwrap_or(cwd);
-            let lockfile = project_root.join(DEFAULT_LOCKFILE_NAME);
-            let lock = match fs::read_to_string(&lockfile) {
-                Ok(l) => match Lock::from_str(&l) {
-                    Ok(l) => l,
-                    // Include file path in errors
-                    Err(e) => bail!("invalid lockfile `{lockfile}`:\n{e}"),
-                },
-                Err(e) => {
-                    if e.kind() == ErrorKind::NotFound {
-                        command_lock(
-                            ".",
-                            resolution_opts,
-                            &config,
-                            &project_root,
-                            client.clone(),
-                            runtime.clone(),
-                            basic_auth_policy.clone(),
-                            ctx,
-                        )?
-                    } else {
-                        bail!("failed to read lockfile `{lockfile}`: {e}")
-                    }
-                }
-            };
-            command_sync(
-                &lock,
-                project_root,
-                &mut local_environment,
-                client,
-                &provided_iris,
-                runtime,
-                basic_auth_policy,
-            )
-        }
-        Command::Add {
+        Command::Usage(cli::UsageCommand::Add {
             locator,
             version_constraint,
             no_lock,
             no_sync,
             resolution_opts,
             source_opts,
-        } => {
+        }) => {
             let iri = iri_or_path_to_iri(locator.iri, locator.path)?;
             command_add(
                 iri,
@@ -423,7 +427,7 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                 basic_auth_policy,
             )
         }
-        Command::Remove { locator } => {
+        Command::Usage(cli::UsageCommand::Remove { locator }) => {
             let iri = iri_or_path_to_iri(locator.iri, locator.path)?;
             command_remove(
                 iri,
@@ -432,12 +436,12 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                 args.global_opts.no_config,
             )
         }
-        Command::Include {
+        Command::Source(cli::SourceCommand::Add {
             paths,
             compute_checksum: add_checksum,
             no_index_symbols,
-        } => command_include(paths, add_checksum, !no_index_symbols, ctx),
-        Command::Exclude { paths } => command_exclude(paths, ctx),
+        }) => command_include(paths, add_checksum, !no_index_symbols, ctx),
+        Command::Source(cli::SourceCommand::Remove { paths }) => command_exclude(paths, ctx),
         Command::Build {
             path,
             compression,

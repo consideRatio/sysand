@@ -70,50 +70,19 @@ pub enum Command {
         /// Set the version in SemVer 2.0 format. Defaults to `0.0.1`
         #[arg(long)]
         version: Option<String>,
-        /// Don't require version to conform to SemVer
-        #[arg(long, requires = "version")]
-        no_semver: bool,
-        /// Set the license in the form of an SPDX license identifier
+        /// Set the license in the form of an SPDX license identifier.
         /// Defaults to omitting the license field
         #[arg(long, alias = "licence", verbatim_doc_comment)]
         license: Option<String>,
-        /// Don't require license to be an SPDX expression
+        /// Allow non-SPDX license expressions
         #[arg(long, requires = "license")]
-        no_spdx: bool,
+        allow_non_spdx: bool,
     },
-    // Only for better error messages
-    /// Add usage to project information
-    Add {
-        #[clap(flatten)]
-        locator: AddProjectLocatorArgs,
-        /// A constraint on the allowed versions of a used project.
-        /// Assumes that the project being added uses Semantic Versioning.
-        /// Version constraints use same syntax as Rust's Cargo.
-        /// Examples: `1.2.3`, `<2`, `>=3`. For details, see the user
-        /// guide's `Project information and metadata` section
-        #[clap(verbatim_doc_comment)]
-        version_constraint: Option<String>,
-        /// Do not automatically resolve dependencies (and generate lockfile)
-        #[arg(long, default_value_t = false)]
-        no_lock: bool,
-        /// Do not automatically install dependencies
-        #[arg(long, default_value_t = false)]
-        no_sync: bool,
-
-        #[command(flatten)]
-        resolution_opts: ResolutionOptions,
-        #[command(flatten)]
-        source_opts: Box<ProjectSourceOptions>,
-    },
-    /// Remove usage from project information
-    #[clap(alias = "rm")]
-    Remove {
-        #[clap(flatten)]
-        locator: RemoveProjectLocatorArgs,
-    },
+    /// Find the project root directory
+    Locate,
     /// Clone a project to a specified directory.
     /// Equivalent to manually downloading, extracting the
-    /// project to the directory and running `sysand sync`
+    /// project to the directory and running `sysand env sync`
     #[clap(verbatim_doc_comment)]
     Clone {
         #[clap(flatten)]
@@ -126,68 +95,97 @@ pub enum Command {
         /// version according to SemVer 2.0
         #[arg(long, short = 'V', verbatim_doc_comment)]
         version: Option<String>,
-
         /// Don't resolve or install dependencies
         #[arg(long)]
         no_deps: bool,
         #[command(flatten)]
         resolution_opts: ResolutionOptions,
     },
-    /// Include model interchange files in project metadata
-    Include {
-        /// File(s) to include in the project.
+    /// Build a KerML Project Archive (KPAR). If executed in a workspace
+    /// outside of a project, builds all projects in the workspace.
+    #[clap(verbatim_doc_comment)]
+    Build {
+        /// Path for the finished KPAR or KPARs
+        #[clap(verbatim_doc_comment)]
+        path: Option<Utf8PathBuf>,
+        /// Method to compress the files in the KPAR
+        #[arg(short = 'c', long, default_value_t, value_enum)]
+        compression: KparCompressionMethodCli,
+        /// Allow usages of local paths (`file://`)
+        #[arg(long, short, default_value_t = false, verbatim_doc_comment)]
+        allow_path_usage: bool,
+    },
+    /// Manage project source files
+    #[command(subcommand)]
+    Source(SourceCommand),
+    /// Manage project usages (dependencies)
+    #[command(subcommand)]
+    Usage(UsageCommand),
+    /// Lockfile operations
+    #[command(subcommand)]
+    Lock(LockCommand),
+    /// Environment management
+    Env {
+        #[command(subcommand)]
+        command: Option<EnvCommand>,
+    },
+}
+
+#[derive(clap::Subcommand, Debug, Clone)]
+pub enum SourceCommand {
+    /// Add model interchange files to project metadata
+    Add {
+        /// File(s) to include in the project
         #[arg(num_args = 1..)]
         paths: Vec<Utf8PathBuf>,
-        /// Compute and add each file's (current) SHA256 checksum
-        // TODO: will it ever be automatically updated?
-        //       Maybe only when building a kpar?
+        /// Compute and add each file's SHA256 checksum
         #[arg(long, default_value_t = false)]
         compute_checksum: bool,
         /// Do not detect and add top level symbols to index
         #[arg(long, default_value_t = false)]
         no_index_symbols: bool,
     },
-    /// Exclude model interchange file from project metadata
-    Exclude {
+    /// Remove model interchange files from project metadata
+    #[clap(alias = "rm")]
+    Remove {
         /// File(s) to exclude from the project
         #[arg(num_args = 1..)]
         paths: Vec<String>,
     },
-    /// Build a KerML Project Archive (KPAR). If executed in a workspace
-    /// outside of a project, builds all projects in the workspace.
-    #[clap(verbatim_doc_comment)]
-    Build {
-        /// Path for the finished KPAR or KPARs. When building a
-        /// workspace, it is a path to the folder to write the KPARs to
-        /// (default: `<current-workspace>/output`). When building a single
-        /// project, it is a path to the KPAR file to write (default
-        /// `<current-workspace>/output/<project name>-<version>.kpar` or
-        /// `<current-project>/output/<project name>-<version>.kpar` depending
-        /// on whether the current project belongs to a workspace or not).
+}
+
+#[derive(clap::Subcommand, Debug, Clone)]
+pub enum UsageCommand {
+    /// Add a usage (dependency) to the project
+    Add {
+        #[clap(flatten)]
+        locator: AddProjectLocatorArgs,
+        /// Version constraint (semver syntax)
         #[clap(verbatim_doc_comment)]
-        path: Option<Utf8PathBuf>,
-        /// Method to compress the files in the KPAR
-        #[arg(short = 'c', long, default_value_t, value_enum)]
-        compression: KparCompressionMethodCli,
-        /// Allow usages of local paths (`file://`).
-        /// Warning: using this makes the project not portable between different
-        /// computers, as `file://` URL always contains an absolute path.
-        /// For multiple related projects, consider using a workspace instead
-        #[arg(long, short, default_value_t = false, verbatim_doc_comment)]
-        allow_path_usage: bool,
-    },
-    /// Create or update lockfile
-    Lock {
+        version_constraint: Option<String>,
+        /// Do not automatically resolve dependencies
+        #[arg(long, default_value_t = false)]
+        no_lock: bool,
+        /// Do not automatically install dependencies
+        #[arg(long, default_value_t = false)]
+        no_sync: bool,
         #[command(flatten)]
         resolution_opts: ResolutionOptions,
+        #[command(flatten)]
+        source_opts: Box<ProjectSourceOptions>,
     },
-    /// Create a local `sysand_env` directory for installing dependencies
-    Env {
-        #[command(subcommand)]
-        command: Option<EnvCommand>,
+    /// Remove a usage (dependency) from the project
+    #[clap(alias = "rm")]
+    Remove {
+        #[clap(flatten)]
+        locator: RemoveProjectLocatorArgs,
     },
-    /// Sync `sysand_env` to lockfile, creating a lockfile and `sysand_env` if needed
-    Sync {
+}
+
+#[derive(clap::Subcommand, Debug, Clone)]
+pub enum LockCommand {
+    /// Create or update the lockfile
+    Update {
         #[command(flatten)]
         resolution_opts: ResolutionOptions,
     },
@@ -361,6 +359,11 @@ impl clap::builder::TypedValueParser for InvalidCommand {
 
 #[derive(clap::Subcommand, Debug, Clone)]
 pub enum EnvCommand {
+    /// Sync `sysand_env` to lockfile
+    Sync {
+        #[command(flatten)]
+        resolution_opts: ResolutionOptions,
+    },
     /// Install project in `sysand_env`
     Install {
         /// IRI identifying the project to be installed
