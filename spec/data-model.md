@@ -4,13 +4,13 @@ The files sysand reads and writes, their schemas, and how they relate.
 
 ## Overview
 
-| File               | Location       | Format | Purpose                               | Mutable by                                      |
-| ------------------ | -------------- | ------ | ------------------------------------- | ----------------------------------------------- |
-| `.project.json`    | Project root   | JSON   | Project identity and usages           | `init`, `usage add/remove`     |
-| `.meta.json`       | Project root   | JSON   | Project metadata (symbols, checksums) | `source add/remove`            |
-| `sysand.toml`      | Project root   | TOML   | Config: indexes, source overrides     | `usage add --source-kind`, manual editing       |
-| `sysand-lock.toml` | Project root   | TOML   | Resolved dependency graph             | `lock update`                                   |
-| `.workspace.json`  | Workspace root | JSON   | Lists member projects                 | Manual editing                                  |
+| File               | Location       | Format | Purpose                               | Mutable by                                |
+| ------------------ | -------------- | ------ | ------------------------------------- | ----------------------------------------- |
+| `.project.json`    | Project root   | JSON   | Project identity and usages           | `init`, `usage add/remove`                |
+| `.meta.json`       | Project root   | JSON   | Project metadata (symbols, checksums) | `source add/remove`                       |
+| `sysand.toml`      | Project root   | TOML   | Config: indexes, source overrides     | `usage add --source-kind`, manual editing |
+| `sysand-lock.toml` | Project root   | TOML   | Resolved dependency graph             | `lock update`                             |
+| `.workspace.json`  | Workspace root | JSON   | Lists member projects                 | Manual editing                            |
 
 ## `.project.json`
 
@@ -238,15 +238,15 @@ Lists member projects in a workspace.
 
 ### Workspace fields
 
-| Field           | Type              | Required | Notes                                    |
-| --------------- | ----------------- | -------- | ---------------------------------------- |
-| `projects`      | WorkspaceProject[] | Yes     | Member projects                          |
-| `meta`          | WorkspaceMeta     | No       | Workspace-level metadata                 |
+| Field      | Type               | Required | Notes                    |
+| ---------- | ------------------ | -------- | ------------------------ |
+| `projects` | WorkspaceProject[] | Yes      | Member projects          |
+| `meta`     | WorkspaceMeta      | No       | Workspace-level metadata |
 
 ### WorkspaceMeta
 
-| Field       | Type         | Required | Notes                            |
-| ----------- | ------------ | -------- | -------------------------------- |
+| Field       | Type         | Required | Notes                             |
+| ----------- | ------------ | -------- | --------------------------------- |
 | `metamodel` | string (IRI) | No       | Default metamodel for all members |
 
 ### Workspace project entry

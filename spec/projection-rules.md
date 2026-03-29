@@ -10,12 +10,12 @@ up — just by applying these rules.
 Every segment in the CLI command path becomes a namespace level.
 No renaming, no special cases.
 
-| CLI                    | Rust               | Java                        | JS/WASM                  | Python                   |
-| ---------------------- | ------------------ | --------------------------- | ------------------------ | ------------------------ |
-| `sysand init`          | `init()`           | `client.init()`             | `sysand.init()`          | `sysand.init()`          |
-| `sysand source add`    | `source::add()`    | `client.source().add()`     | `sysand.source.add()`    | `sysand.source.add()`    |
-| `sysand usage add`     | `usage::add()`     | `client.usage().add()`      | `sysand.usage.add()`     | `sysand.usage.add()`     |
-| `sysand env install`   | `env::install()`   | `client.env().install()`    | `sysand.env.install()`   | `sysand.env.install()`   |
+| CLI                  | Rust             | Java                     | JS/WASM                | Python                 |
+| -------------------- | ---------------- | ------------------------ | ---------------------- | ---------------------- |
+| `sysand init`        | `init()`         | `client.init()`          | `sysand.init()`        | `sysand.init()`        |
+| `sysand source add`  | `source::add()`  | `client.source().add()`  | `sysand.source.add()`  | `sysand.source.add()`  |
+| `sysand usage add`   | `usage::add()`   | `client.usage().add()`   | `sysand.usage.add()`   | `sysand.usage.add()`   |
+| `sysand env install` | `env::install()` | `client.env().install()` | `sysand.env.install()` | `sysand.env.install()` |
 
 Project lifecycle commands (`init`, `locate`, `clone`, `build`) are
 root-level — no namespace prefix. `source`, `usage`, `lock`, `env`,
@@ -76,11 +76,11 @@ No universal wrapper types.
 
 ## Errors
 
-| Surface | Shape                                           |
-| ------- | ----------------------------------------------- |
-| Rust    | `Result<T, SysandError>` with `ErrorCode` enum  |
-| Java    | throws `SysandException` with `ErrorCode` field |
-| JS/WASM | throws `SysandError` with `code` property       |
+| Surface | Shape                                            |
+| ------- | ------------------------------------------------ |
+| Rust    | `Result<T, SysandError>` with `ErrorCode` enum   |
+| Java    | throws `SysandException` with `ErrorCode` field  |
+| JS/WASM | throws `SysandError` with `code` property        |
 | Python  | raises `SysandError` with `code: ErrorCode` enum |
 
 Error codes are the same enum everywhere. No per-command exception

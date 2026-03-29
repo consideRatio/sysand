@@ -76,13 +76,13 @@ Every binding follows: construct storage, call facade, convert error.
 
 Facade module path maps to binding namespace:
 
-| Facade function   | Java                              | JS/WASM              | Python               |
-| ----------------- | --------------------------------- | -------------------- | -------------------- |
-| `facade::init`    | `com.sensmetry.sysand.init()`     | `sysand.init()`      | `sysand.init()`      |
-| `facade::build`   | `com.sensmetry.sysand.build()`    | `sysand.build()`     | `sysand.build()`     |
-| `source::add`     | `com.sensmetry.sysand.Source.add()`| `sysand.source.add()`| `sysand.source.add()`|
-| `usage::add`      | `com.sensmetry.sysand.Usage.add()`| `sysand.usage.add()` | `sysand.usage.add()` |
-| `env::sync`       | `com.sensmetry.sysand.Env.sync()` | `sysand.env.sync()`  | `sysand.env.sync()`  |
+| Facade function | Java                                | JS/WASM               | Python                |
+| --------------- | ----------------------------------- | --------------------- | --------------------- |
+| `facade::init`  | `com.sensmetry.sysand.init()`       | `sysand.init()`       | `sysand.init()`       |
+| `facade::build` | `com.sensmetry.sysand.build()`      | `sysand.build()`      | `sysand.build()`      |
+| `source::add`   | `com.sensmetry.sysand.Source.add()` | `sysand.source.add()` | `sysand.source.add()` |
+| `usage::add`    | `com.sensmetry.sysand.Usage.add()`  | `sysand.usage.add()`  | `sysand.usage.add()`  |
+| `env::sync`     | `com.sensmetry.sysand.Env.sync()`   | `sysand.env.sync()`   | `sysand.env.sync()`   |
 
 ### Command Wrappers vs Storage Backends
 

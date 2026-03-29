@@ -15,12 +15,12 @@ the error. Optional because some errors are context-free.
 
 ## Binding Projections
 
-| Surface | Shape                                                                 |
-| ------- | --------------------------------------------------------------------- |
-| Rust    | `Result<T, SysandError>` with `ErrorCode` enum                        |
-| Java    | throws `SysandException` with `ErrorCode` field                       |
-| JS/WASM | throws `SysandError` with `code` property (`"kebab-case"` string)     |
-| Python  | raises `SysandError` with `code` attribute (`ErrorCode` enum)        |
+| Surface | Shape                                                             |
+| ------- | ----------------------------------------------------------------- |
+| Rust    | `Result<T, SysandError>` with `ErrorCode` enum                    |
+| Java    | throws `SysandException` with `ErrorCode` field                   |
+| JS/WASM | throws `SysandError` with `code` property (`"kebab-case"` string) |
+| Python  | raises `SysandError` with `code` attribute (`ErrorCode` enum)     |
 
 Error codes are the same enum everywhere. No per-command exception
 classes.
@@ -114,7 +114,7 @@ that inspect the code are:
   `code` property).
 - **Infrastructure code** — `std::io::ErrorKind` matches for
   expected conditions (file-not-found → return `Ok(false)`,
-  cross-device rename → fallback to copy). These happen *before*
+  cross-device rename → fallback to copy). These happen _before_
   constructing a `SysandError`, not after.
 
 ## Rationale

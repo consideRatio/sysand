@@ -37,11 +37,11 @@ config files itself. The caller decides how to construct it.
 
 Three loading functions are available:
 
-| Function                   | Reads                                              | Use case                        |
-| -------------------------- | -------------------------------------------------- | ------------------------------- |
-| `get_config(path)`         | A single config file                               | Library — project config only   |
-| `load_configs(project_path)` | User-level + project-level, append-only merge    | CLI — full config with defaults |
-| Manual construction        | Nothing — caller builds `Config` directly          | Library — custom indexes/overrides |
+| Function                     | Reads                                         | Use case                           |
+| ---------------------------- | --------------------------------------------- | ---------------------------------- |
+| `get_config(path)`           | A single config file                          | Library — project config only      |
+| `load_configs(project_path)` | User-level + project-level, append-only merge | CLI — full config with defaults    |
+| Manual construction          | Nothing — caller builds `Config` directly     | Library — custom indexes/overrides |
 
 `load_configs` reads `<user-config-dir>/sysand/sysand.toml` (if it
 exists), then `<project>/sysand.toml`, and appends the entries from
@@ -76,10 +76,10 @@ It never reads credentials from the environment itself.
 
 Two authentication schemes are supported:
 
-| Scheme | Credentials              | When used                     |
-| ------ | ------------------------ | ----------------------------- |
-| Basic  | username + password      | HTTP indexes, remote sources  |
-| Bearer | token                    | HTTP indexes, remote sources  |
+| Scheme | Credentials         | When used                    |
+| ------ | ------------------- | ---------------------------- |
+| Basic  | username + password | HTTP indexes, remote sources |
+| Bearer | token               | HTTP indexes, remote sources |
 
 Credentials are scoped to URL glob patterns (e.g.,
 `https://*.corp.com/**`). A request first tries unauthenticated

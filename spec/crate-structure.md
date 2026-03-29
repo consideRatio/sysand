@@ -108,13 +108,13 @@ them in.
 Types in `types/` are the public vocabulary shared between the facade
 and its callers. They fall into four categories:
 
-| Category | Examples                                          | Notes                                    |
-| -------- | ------------------------------------------------- | ---------------------------------------- |
-| Context  | `ProjectContext`, `WorkspaceContext`               | Passed as first arg to most functions    |
-| Options  | `InitOptions`, `BuildOptions`, `UsageAddOptions`  | Per-command configuration                |
-| Output   | `BuildOutput`, `EnvEntry`                         | Return values from facade functions      |
-| Enums    | `UpdateMode`, `Compression`, `ConfigMode`         | Used in options and context              |
-| Error    | `SysandError`, `ErrorCode`                        | Single error type for all facade returns |
+| Category | Examples                                         | Notes                                    |
+| -------- | ------------------------------------------------ | ---------------------------------------- |
+| Context  | `ProjectContext`, `WorkspaceContext`             | Passed as first arg to most functions    |
+| Options  | `InitOptions`, `BuildOptions`, `UsageAddOptions` | Per-command configuration                |
+| Output   | `BuildOutput`, `EnvEntry`                        | Return values from facade functions      |
+| Enums    | `UpdateMode`, `Compression`, `ConfigMode`        | Used in options and context              |
+| Error    | `SysandError`, `ErrorCode`                       | Single error type for all facade returns |
 
 Internal types (`InterchangeProjectInfoRaw`, `Lock`, resolver traits,
 etc.) stay in `internal/` and do not appear in facade signatures.
@@ -124,31 +124,31 @@ etc.) stay in `internal/` and do not appear in facade signatures.
 The reference implementation has all modules at the top level of
 `core/src/`, with everything `pub`. The migration:
 
-| Reference location                    | Target location           | Visibility    |
-| ------------------------------------- | ------------------------- | ------------- |
-| `commands/init.rs` (do_init)          | `facade/init.rs`          | pub           |
-| `commands/add.rs` (do_add)            | `facade/usage.rs` (add)   | pub           |
-| `commands/include.rs` (do_include)    | `facade/source.rs` (add)  | pub           |
-| `commands/exclude.rs` (do_exclude)    | `facade/source.rs` (remove)| pub          |
-| `commands/build.rs` (do_build_kpar)   | `facade/build.rs`         | pub           |
-| `commands/lock.rs` (do_lock)          | `facade/lock.rs` (update) | pub           |
-| `commands/sync.rs` (do_sync)          | `facade/env.rs` (sync)    | pub           |
-| `commands/env.rs`                     | `facade/env.rs`           | pub           |
-| `commands/info.rs`                    | removed                   | —             |
-| `commands/sources.rs`                 | removed                   | —             |
-| `commands/root.rs`                    | `facade/locate.rs`        | pub           |
-| `context.rs` (ProjectContext)         | `types/context.rs`        | pub           |
-| `model.rs`                            | `internal/model.rs`       | pub(crate)    |
-| `project/`                            | `internal/project/`       | pub(crate)    |
-| `env/`                                | `internal/env/`           | pub(crate)    |
-| `resolve/`                            | `internal/resolve/`       | pub(crate)    |
-| `solve/`                              | `internal/solve/`         | pub(crate)    |
-| `lock.rs`                             | `internal/lock.rs`        | pub(crate)    |
-| `config/`                             | `internal/config/`        | pub(crate)    |
-| `auth.rs`                             | `internal/auth.rs`        | pub(crate)    |
-| `discover.rs`                         | `internal/discover.rs`    | pub(crate)    |
-| `stdlib.rs`                           | `internal/stdlib.rs`      | pub(crate)    |
-| `workspace.rs`                        | `internal/workspace.rs`   | pub(crate)    |
+| Reference location                  | Target location             | Visibility |
+| ----------------------------------- | --------------------------- | ---------- |
+| `commands/init.rs` (do_init)        | `facade/init.rs`            | pub        |
+| `commands/add.rs` (do_add)          | `facade/usage.rs` (add)     | pub        |
+| `commands/include.rs` (do_include)  | `facade/source.rs` (add)    | pub        |
+| `commands/exclude.rs` (do_exclude)  | `facade/source.rs` (remove) | pub        |
+| `commands/build.rs` (do_build_kpar) | `facade/build.rs`           | pub        |
+| `commands/lock.rs` (do_lock)        | `facade/lock.rs` (update)   | pub        |
+| `commands/sync.rs` (do_sync)        | `facade/env.rs` (sync)      | pub        |
+| `commands/env.rs`                   | `facade/env.rs`             | pub        |
+| `commands/info.rs`                  | removed                     | —          |
+| `commands/sources.rs`               | removed                     | —          |
+| `commands/root.rs`                  | `facade/locate.rs`          | pub        |
+| `context.rs` (ProjectContext)       | `types/context.rs`          | pub        |
+| `model.rs`                          | `internal/model.rs`         | pub(crate) |
+| `project/`                          | `internal/project/`         | pub(crate) |
+| `env/`                              | `internal/env/`             | pub(crate) |
+| `resolve/`                          | `internal/resolve/`         | pub(crate) |
+| `solve/`                            | `internal/solve/`           | pub(crate) |
+| `lock.rs`                           | `internal/lock.rs`          | pub(crate) |
+| `config/`                           | `internal/config/`          | pub(crate) |
+| `auth.rs`                           | `internal/auth.rs`          | pub(crate) |
+| `discover.rs`                       | `internal/discover.rs`      | pub(crate) |
+| `stdlib.rs`                         | `internal/stdlib.rs`        | pub(crate) |
+| `workspace.rs`                      | `internal/workspace.rs`     | pub(crate) |
 
 New types not in reference (to be created):
 

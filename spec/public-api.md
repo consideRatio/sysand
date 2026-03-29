@@ -194,12 +194,12 @@ Paired `--source-kind` + `--source` flags.
 
 See `error-model.md`. All operations return errors through this type.
 
-| Surface | Shape                                           |
-| ------- | ----------------------------------------------- |
-| CLI     | Exit code + stderr message                      |
-| Rust    | `Result<T, SysandError>`                        |
-| Java    | throws `SysandException` with `ErrorCode` field |
-| JS/WASM | throws `SysandError` with `code` property       |
+| Surface | Shape                                            |
+| ------- | ------------------------------------------------ |
+| CLI     | Exit code + stderr message                       |
+| Rust    | `Result<T, SysandError>`                         |
+| Java    | throws `SysandException` with `ErrorCode` field  |
+| JS/WASM | throws `SysandError` with `code` property        |
 | Python  | raises `SysandError` with `code: ErrorCode` enum |
 
 ### BuildOutput
@@ -247,26 +247,26 @@ map CLI command paths to namespaces mechanically.
 
 Project operations live at the root level — no `project` namespace.
 
-| Command | CLI                                | Rust                                              | Java                              | JS/WASM                          | Python                            |
-| ------- | ---------------------------------- | ------------------------------------------------- | --------------------------------- | -------------------------------- | --------------------------------- |
-| init    | `sysand init <PATH> [opts]`        | `init(path, InitOptions) → Result<()>`            | `client.init(path, opts)`         | `sysand.init(path, opts?)`       | `sysand.init(path, **opts)`       |
-| locate  | `sysand locate [--project PATH]`   | `locate(path) → Result<Utf8PathBuf>`              | `client.locate(path)`             | `sysand.locate(path)`            | `sysand.locate(path)`             |
-| clone   | `sysand clone <LOCATOR> [opts]`    | `clone(locator, CloneOptions) → Result<()>`       | `client.clone(locator, opts)`     | `sysand.clone(locator, opts?)`   | `sysand.clone(locator, **opts)`   |
-| build   | `sysand build [opts]`              | `build(&ctx, BuildOptions) → Result<BuildOutput>` | `client.build(ctx, opts)`         | `sysand.build(ctx, opts?)`       | `sysand.build(ctx, **opts)`       |
+| Command | CLI                              | Rust                                              | Java                          | JS/WASM                        | Python                          |
+| ------- | -------------------------------- | ------------------------------------------------- | ----------------------------- | ------------------------------ | ------------------------------- |
+| init    | `sysand init <PATH> [opts]`      | `init(path, InitOptions) → Result<()>`            | `client.init(path, opts)`     | `sysand.init(path, opts?)`     | `sysand.init(path, **opts)`     |
+| locate  | `sysand locate [--project PATH]` | `locate(path) → Result<Utf8PathBuf>`              | `client.locate(path)`         | `sysand.locate(path)`          | `sysand.locate(path)`           |
+| clone   | `sysand clone <LOCATOR> [opts]`  | `clone(locator, CloneOptions) → Result<()>`       | `client.clone(locator, opts)` | `sysand.clone(locator, opts?)` | `sysand.clone(locator, **opts)` |
+| build   | `sysand build [opts]`            | `build(&ctx, BuildOptions) → Result<BuildOutput>` | `client.build(ctx, opts)`     | `sysand.build(ctx, opts?)`     | `sysand.build(ctx, **opts)`     |
 
 ### source
 
-| Command | CLI                                       | Rust                                                      | Java                                    | JS/WASM                                  | Python                                    |
-| ------- | ----------------------------------------- | --------------------------------------------------------- | --------------------------------------- | ---------------------------------------- | ----------------------------------------- |
-| add     | `sysand source add <PATH>... [opts]`      | `source::add(&ctx, paths, SourceAddOptions) → Result<()>` | `client.source().add(ctx, paths, opts)` | `sysand.source.add(ctx, paths, opts?)`   | `sysand.source.add(ctx, paths, **opts)`   |
-| remove  | `sysand source remove <PATH>... [opts]`   | `source::remove(&ctx, paths) → Result<()>`                | `client.source().remove(ctx, paths)`    | `sysand.source.remove(ctx, paths)`       | `sysand.source.remove(ctx, paths)`        |
+| Command | CLI                                     | Rust                                                      | Java                                    | JS/WASM                                | Python                                  |
+| ------- | --------------------------------------- | --------------------------------------------------------- | --------------------------------------- | -------------------------------------- | --------------------------------------- |
+| add     | `sysand source add <PATH>... [opts]`    | `source::add(&ctx, paths, SourceAddOptions) → Result<()>` | `client.source().add(ctx, paths, opts)` | `sysand.source.add(ctx, paths, opts?)` | `sysand.source.add(ctx, paths, **opts)` |
+| remove  | `sysand source remove <PATH>... [opts]` | `source::remove(&ctx, paths) → Result<()>`                | `client.source().remove(ctx, paths)`    | `sysand.source.remove(ctx, paths)`     | `sysand.source.remove(ctx, paths)`      |
 
 ### usage
 
-| Command | CLI                                             | Rust                                                      | Java                                     | JS/WASM                                | Python                                  |
-| ------- | ----------------------------------------------- | --------------------------------------------------------- | ---------------------------------------- | -------------------------------------- | --------------------------------------- |
-| add     | `sysand usage add <IRI> [VERSION_REQ] [opts]`   | `usage::add(&ctx, iri, UsageAddOptions) → Result<()>`     | `client.usage().add(ctx, iri, opts)`     | `sysand.usage.add(ctx, iri, opts?)`    | `sysand.usage.add(ctx, iri, **opts)`    |
-| remove  | `sysand usage remove <IRI> [opts]`              | `usage::remove(&ctx, iri) → Result<()>`                   | `client.usage().remove(ctx, iri)`        | `sysand.usage.remove(ctx, iri)`        | `sysand.usage.remove(ctx, iri)`         |
+| Command | CLI                                           | Rust                                                  | Java                                 | JS/WASM                             | Python                               |
+| ------- | --------------------------------------------- | ----------------------------------------------------- | ------------------------------------ | ----------------------------------- | ------------------------------------ |
+| add     | `sysand usage add <IRI> [VERSION_REQ] [opts]` | `usage::add(&ctx, iri, UsageAddOptions) → Result<()>` | `client.usage().add(ctx, iri, opts)` | `sysand.usage.add(ctx, iri, opts?)` | `sysand.usage.add(ctx, iri, **opts)` |
+| remove  | `sysand usage remove <IRI> [opts]`            | `usage::remove(&ctx, iri) → Result<()>`               | `client.usage().remove(ctx, iri)`    | `sysand.usage.remove(ctx, iri)`     | `sysand.usage.remove(ctx, iri)`      |
 
 ### lock
 
