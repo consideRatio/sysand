@@ -10,8 +10,6 @@ from ._model import (
     CompressionMethod,
 )
 
-from ._info import info_path, info
-
 from . import env
 
 from ._init import (
@@ -35,11 +33,6 @@ from ._exclude import (
     exclude,
 )
 
-
-from ._sources import (
-    sources,
-)
-
 from ._build import build
 
 __all__ = [
@@ -54,9 +47,6 @@ __all__ = [
     "remove",
     ## Env
     "env",
-    ## info
-    "info_path",
-    "info",
     ## Init
     "init",
     ## Build
@@ -65,6 +55,4 @@ __all__ = [
     "include",
     ## Exclude
     "exclude",
-    ## Sources
-    "sources",
 ]
