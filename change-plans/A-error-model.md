@@ -139,13 +139,24 @@ How current error variants map to ErrorCode:
 | `AddError::Validation`                    | `SchemaInvalid`                               |
 | `AddError::MissingInfo`                   | `FieldRequired`                               |
 | `RemoveError::UsageNotFound`              | `UsageNotFound`                               |
-| `RemoveError::ProjectInfoNotFound`        | `ProjectNotFound`                             |
-| `IncludeError::Extract`                   | `BuildFailed`                                 |
+| `RemoveError::MissingInfo`                | `FieldRequired`                               |
+| `IncludeError::Extract(path, err)`        | `BuildFailed` (2-field variant)               |
 | `IncludeError::UnknownFormat`             | `FieldInvalid`                                |
-| `ExcludeError::NotFound`                  | `PathNotFound`                                |
-| `KParBuildError::*` (most)                | `BuildFailed`                                 |
+| `ExcludeError::SourceNotFound`            | `PathNotFound` (not `NotFound`)               |
 | `KParBuildError::Validation`              | `SchemaInvalid`                               |
 | `KParBuildError::PathUsage`               | `FieldInvalid`                                |
+| `KParBuildError::IncompleteSource`        | `FieldRequired`                               |
+| `KParBuildError::MissingInfo`             | `FieldRequired`                               |
+| `KParBuildError::MissingMeta`             | `FieldRequired`                               |
+| `KParBuildError::Extract`                 | `BuildFailed`                                 |
+| `KParBuildError::UnknownFormat`           | `FieldInvalid`                                |
+| `KParBuildError::Serialize`               | `Internal`                                    |
+| `KParBuildError::WorkspaceMetamodelConflict` | `ConfigInvalid`                            |
+| `KParBuildError::Zip`                     | `BuildFailed`                                 |
+| `KParBuildError::Io`                      | `IoError`                                     |
+| `KParBuildError::ProjectRead`             | delegates to `P::into()`                      |
+| `KParBuildError::WorkspaceRead`           | delegates to `WorkspaceReadError` impl        |
+| `KParBuildError::LocalSrc`                | delegates to `LocalSrcError` impl             |
 | `SyncError::BadChecksum`                  | `EnvCorrupted`                                |
 | `SyncError::BadProject`                   | `SchemaInvalid`                               |
 | `SyncError::NoKnownSources`               | `ProjectNotInIndex`                           |
@@ -161,7 +172,7 @@ How current error variants map to ErrorCode:
 | `LocalSrcError::AlreadyExists`            | `EnvConflict`                                 |
 | `LocalSrcError::MissingMeta`              | `FieldRequired`                               |
 | `LocalSrcError::Io`                       | `IoError`                                     |
-| `LocalSrcError::Path`                     | `PathNotFound`                                |
+| `LocalSrcError::Path`                     | `FieldInvalid`                                |
 | `LocalSrcError::Deserialize`              | `SchemaInvalid`                               |
 | `LocalSrcError::Serialize`                | `Internal`                                    |
 | `FsIoError::*` (all)                      | `IoError`                                     |
@@ -175,7 +186,15 @@ How current error variants map to ErrorCode:
 | `HTTPEnvironmentError::Request`           | `IndexUnreachable`                            |
 | `ReqwestSrcError::Reqwest`                | `IndexUnreachable`                            |
 | `GixDownloadedError::Clone`               | `IndexUnreachable`                            |
+| `GixDownloadedError::Fetch`               | `IndexUnreachable`                            |
+| `GixDownloadedError::Checkout`            | `IndexUnreachable`                            |
 | `GixDownloadedError::UrlParse`            | `IriInvalid`                                  |
+| `GixDownloadedError::Other`               | `Internal`                                    |
+| `ReqwestKparDownloadedError::BadHttpStatus` | `AuthFailed` / `ProjectNotInIndex` / `IndexUnreachable` (by status code) |
+| `ReqwestKparDownloadedError::ParseUrl`    | `IriInvalid`                                  |
+| `ReqwestKparDownloadedError::Reqwest`     | `IndexUnreachable`                            |
+| `ReqwestKparDownloadedError::ReqwestMiddleware` | `IndexUnreachable`                       |
+| `ReqwestKparDownloadedError::KPar`        | delegates to `LocalKParError` impl            |
 | `SyncError::InvalidRemoteSource`          | `IriInvalid`                                  |
 | `ReqwestSrcError::Reqwest` (401/403)      | `AuthFailed`                                  |
 | `ReqwestSrcError::Reqwest` (5xx)          | `IndexUnreachable`                            |
@@ -187,8 +206,9 @@ How current error variants map to ErrorCode:
 
 ### Step 1: Define `SysandError` and `ErrorCode`
 
-Create `core/src/types/error.rs` with the types above. Implement
-`Display`, `Error`, `From` conversions. Add helper constructors:
+Create `core/src/error.rs` (not `types/error.rs` — crate restructure
+is plan B; for now it lives at the top level). Implement `Display`,
+`Error`, `From` conversions. Add helper constructors:
 
 ```rust
 impl SysandError {
@@ -197,25 +217,67 @@ impl SysandError {
 }
 ```
 
+Also add `FsIoError::path_context() -> Option<String>` helper to
+extract path info from I/O errors for the `context` field.
+
 ### Step 2: Add `From` impls for existing error types
 
 For each existing error type, implement `From<ExistingError> for
 SysandError`. This lets the facade layer use `?` to convert. Start
 with the leaf types (no generics):
 
-- `From<FsIoError>` — map all variants to `IoError` with path context
-- `From<PathError>` — map to `PathNotFound`
-- `From<ConfigReadError>` — map to `ConfigInvalid` / `ConfigNotFound`
-- `From<WorkspaceReadError>` — map to `WorkspaceNotFound` / `SchemaInvalid`
+- `From<Box<FsIoError>>` — map all variants to `IoError` with path context
+  (note: `Box<FsIoError>`, not `FsIoError` — that's how it's stored)
+- `From<PathError>` — map to `FieldInvalid` (path safety violations)
+- `From<ConfigReadError>` — map to `ConfigInvalid` / `IoError`
+- `From<WorkspaceReadError>` — map to `SchemaInvalid` / `IoError`
 - `From<ValidationError>` — map per variant
 - `From<ParseError>` — map to `SchemaInvalid`
 - `From<ExtractError>` — map to `BuildFailed`
+- `From<LocalSrcError>` — map per variant (delegates to leaf impls)
+- `From<LocalKParError>` — map per variant
+- `From<LocalReadError>` — map to `IoError`
+- `From<LocalWriteError>` — map per variant (delegates to leaf impls)
+- `From<MemoryReadError>` — map per variant
+- `From<InterchangeProjectValidationError>` — map to `SchemaInvalid`
+- `From<ReqwestKparDownloadedError>` — map per variant (HTTP status
+  code inspection for `AuthFailed` vs `IndexUnreachable`)
+- `From<GixDownloadedError>` — map per variant
 
-Then the generic types (parameterized by project error):
+Then the generic command error types. **Critical:** these need
+`std::error::Error + Send + Sync + 'static` bounds on the generic
+param, not just `Into<SysandError>`, because the error enums require
+`ErrorBound` on their type params:
 
-- `From<InitError<impl Into<SysandError>>>` — map per variant
-- `From<AddError<impl Into<SysandError>>>` — map per variant
-- etc.
+```rust
+impl<P: std::error::Error + Send + Sync + 'static + Into<SysandError>>
+    From<InitError<P>> for SysandError { ... }
+```
+
+Generic command impls:
+- `From<InitError<P>>` — map per variant
+- `From<AddError<P>>` — map per variant
+- `From<RemoveError<P>>` — map per variant
+- `From<IncludeError<P>>` — map per variant
+- `From<ExcludeError<P>>` — map per variant
+- `From<KParBuildError<P>>` — map all 14 variants explicitly (no wildcard)
+- `From<EnvError<W>>` — map per variant
+
+**Feature gates:** Many types are behind `#[cfg(feature = "...")]`:
+- `filesystem`: `LocalSrcError`, `PathError`, `LocalKParError`,
+  `ZipArchiveError`, `LocalReadError`, `LocalWriteError`,
+  `ConfigReadError`, `WorkspaceReadError`, `KParBuildError`
+- `filesystem + networking`: `ReqwestKparDownloadedError`,
+  `GixDownloadedError`
+
+Every `From` impl must have the matching `#[cfg(...)]` gate.
+
+**Variant name gotchas** (differ from what you might expect):
+- `ExcludeError::SourceNotFound` (not `NotFound`)
+- `RemoveError::MissingInfo` (not `ProjectInfoNotFound`)
+- `IncludeError::Extract(Box<str>, ExtractError)` — 2 fields, not 1
+- `KParBuildError::WorkspaceMetamodelConflict { .. }` — struct variant
+  with 3 named fields
 
 ### Step 3: Update facade functions to return `Result<T, SysandError>`
 
@@ -276,9 +338,19 @@ fn into_py_err(err: SysandError) -> PyErr {
   command-level error variants for control flow, those matches need
   updating. The spec says this shouldn't happen, but verify by grep.
 
+- **Feature gate combinatorics:** From impls must match the exact
+  `#[cfg(...)]` of the error type they convert. Test with both
+  `cargo check --package sysand-core` (default features = std only)
+  and `cargo check --package sysand-core --features filesystem,networking`
+  to catch mismatched gates.
+
 ## Size Estimate
 
-- New code: ~200 lines (SysandError + ErrorCode + From impls)
+- New code: ~590 lines (SysandError + ErrorCode + From impls — much
+  larger than initially estimated because each From impl with
+  per-variant matching is 10-20 lines)
+- Helper: `FsIoError::path_context()` ~25 lines added to
+  `project/utils.rs`
 - Modified: facade functions (thin wrappers), all 3 bindings
 - Deleted: ~500 lines of error boilerplate across bindings
-- Net reduction in code
+- Net: roughly neutral on step 1-2; net reduction comes in steps 3-5
