@@ -7,6 +7,11 @@ export interface SysandError {
   context?: string;
 }
 
+export interface EnvEntry {
+  iri: string;
+  version?: string;
+}
+
 // Utilities
 export function init_logger(): void;
 export function ensure_debug_hook(): void;
@@ -22,7 +27,37 @@ export function init(
   license?: string,
 ): void;
 
+// source namespace
+export const source: {
+  add(
+    prefix: string,
+    rootPath: string,
+    srcPath: string,
+    checksum?: boolean,
+    indexSymbols?: boolean,
+  ): void;
+  remove(prefix: string, rootPath: string, srcPath: string): void;
+};
+
+// usage namespace
+export const usage: {
+  add(
+    prefix: string,
+    rootPath: string,
+    iri: string,
+    versionReq?: string,
+  ): void;
+  remove(prefix: string, rootPath: string, iri: string): void;
+};
+
 // env namespace
 export const env: {
   create(prefix: string, rootPath: string): void;
+  list(prefix: string, rootPath: string): EnvEntry[];
+  uninstall(
+    prefix: string,
+    rootPath: string,
+    iri: string,
+    version?: string,
+  ): void;
 };
