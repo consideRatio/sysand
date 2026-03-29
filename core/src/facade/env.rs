@@ -3,6 +3,13 @@
 
 //! Environment management facade functions.
 
+// TODO: pub fn sync(ctx, opts) -> Result<(), SysandError>
+// Needs: resolver chain, HTTP client, tokio runtime, auth policy.
+// Same infrastructure question as lock::update.
+
+// TODO: pub fn install(ctx, iri, opts) -> Result<(), SysandError>
+// Needs: same infrastructure as sync + lock.
+
 use crate::env::{ReadEnvironment, WriteEnvironment};
 use crate::error::SysandError;
 use crate::types::output::EnvEntry;

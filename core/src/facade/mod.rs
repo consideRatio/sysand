@@ -11,6 +11,8 @@ pub mod init;
 pub mod source;
 pub mod usage;
 pub mod env;
+pub mod lock;
+pub mod clone;
 
 #[cfg(feature = "filesystem")]
 pub mod build;
