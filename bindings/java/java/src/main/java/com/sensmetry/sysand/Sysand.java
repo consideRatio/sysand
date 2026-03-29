@@ -11,224 +11,80 @@ public class Sysand {
     }
 
     /**
-     * Initialize a new project in the specified directory. The directory must
-     * already exist.
+     * Initialize a new project in the specified directory.
      *
-     * @param name    The name of the project.
-     * @param publisher  The publisher of the project. If {@code null}, default value will be used.
-     * @param version The version of the project in SemVer 2.0.0 format.
-     * @param license The license of the project given as an SPDX license identifier. May be {@code null}.
-     * @param path    The path to the directory in which to initialize the project.
+     * @param name      The name of the project.
+     * @param publisher The publisher. If {@code null}, default value will be used.
+     * @param version   The version in SemVer 2.0.0 format.
+     * @param license   SPDX license identifier. May be {@code null}.
+     * @param path      Directory path to initialize the project in.
      */
     public static native void init(String name, String publisher, String version, String license, String path)
             throws com.sensmetry.sysand.exceptions.SysandException;
 
-    /**
-     * Initialize a new project in the specified directory. The directory must
-     * already exist.
-     *
-     * @param name    The name of the project.
-     * @param publisher  The publisher of the project. If {@code null}, default value will be used.
-     * @param version The version of the project in SemVer 2.0.0 format.
-     * @param license The license of the project given as an SPDX license identifier. May be {@code null}.
-     * @param path    The path to the directory in which to initialize the project.
-     */
     public static void init(String name, String publisher, String version, String license, java.nio.file.Path path)
             throws com.sensmetry.sysand.exceptions.SysandException {
         init(name, publisher, version, license, path.toString());
     }
 
     /**
-     * Get the value of the constant {@code DEFAULT_ENV_NAME}, which is the default name
-     * of the environment directory.
-     *
-     * @return The value of the constant {@code DEFAULT_ENV_NAME}.
+     * Get the default environment directory name ({@code sysand_env}).
      */
     public static native String defaultEnvName();
 
     /**
-     * Create a local sysand_env environment for installing dependencies.
-     *
-     * @param path
+     * Create a local sysand_env environment directory.
      */
     public static native void env(String path) throws com.sensmetry.sysand.exceptions.SysandException;
 
-    /**
-     * Create a local sysand_env environment for installing dependencies.
-     *
-     * @param path
-     */
     public static void env(java.nio.file.Path path)
             throws com.sensmetry.sysand.exceptions.SysandException {
         env(path.toString());
     }
 
     /**
-     * Get the project information and metadata at the given path.
-     *
-     * @param path The path to the project.
-     * @return The project information and metadata.
-     */
-    public static native com.sensmetry.sysand.model.InterchangeProject infoPath(String path)
-            throws com.sensmetry.sysand.exceptions.SysandException;
-
-    /**
-     * Get the project information and metadata at the given path.
-     *
-     * @param path The path to the project.
-     * @return The project information and metadata.
-     */
-    public static com.sensmetry.sysand.model.InterchangeProject infoPath(java.nio.file.Path path)
-            throws com.sensmetry.sysand.exceptions.SysandException {
-        return infoPath(path.toString());
-    }
-
-    /**
-     * Get the project information and metadata at the given URI.
-     *
-     * @param uri              The URI of the project.
-     * @param relativeFileRoot The path which should be used as the root for
-     *                         relative file URIs.
-     * @return The project information and metadata.
-     */
-    public static native com.sensmetry.sysand.model.InterchangeProject[] info(
-            String uri,
-            String relativeFileRoot,
-            String indexUrl)
-            throws com.sensmetry.sysand.exceptions.SysandException;
-
-    /**
-     * Get the project information and metadata at the given URI.
-     *
-     * @param uri              The URI of the project.
-     * @param relativeFileRoot The path which should be used as the root for
-     *                         relative file URIs.
-     * @return The project information and metadata.
-     */
-    public static com.sensmetry.sysand.model.InterchangeProject[] info(
-            java.net.URI uri,
-            java.nio.file.Path relativeFileRoot,
-            java.net.URL indexUrl)
-            throws com.sensmetry.sysand.exceptions.SysandException {
-        String indexUrlString;
-        if (indexUrl != null) {
-            indexUrlString = indexUrl.toString();
-        } else {
-            indexUrlString = null;
-        }
-        return info(uri.toString(), relativeFileRoot.toString(), indexUrlString);
-    }
-
-    /**
-     * Get the project information and metadata at the given URI.
-     *
-     * @param uri              The URI of the project.
-     * @param relativeFileRoot The path which should be used as the root for
-     *                         relative file URIs.
-     * @return The project information and metadata.
-     */
-    public static com.sensmetry.sysand.model.InterchangeProject[] info(
-            java.net.URI uri,
-            java.nio.file.Path relativeFileRoot)
-            throws com.sensmetry.sysand.exceptions.SysandException {
-        return info(uri, relativeFileRoot, null);
-    }
-
-    /**
-     * Get the project information and metadata at the given URI. Uses the current
-     * directory as the relative file root.
-     *
-     * @param uri The URI of the project.
-     * @return The project information and metadata.
-     */
-    public static com.sensmetry.sysand.model.InterchangeProject[] info(java.net.URI uri)
-            throws com.sensmetry.sysand.exceptions.SysandException {
-        java.nio.file.Path relativeFileRoot = java.nio.file.Paths.get(".");
-        return info(uri, relativeFileRoot, null);
-    }
-
-    /**
      * Get absolute paths of all projects in a workspace.
-     *
-     * @param workspacePath The path to the workspace directory containing {@code .workspace.json}.
-     * @return An array of absolute project paths.
      */
     private static native String[] workspaceProjectPaths(String workspacePath)
             throws com.sensmetry.sysand.exceptions.SysandException;
 
-    /**
-     * Get absolute paths of all projects in a workspace.
-     *
-     * @param workspacePath The path to the workspace directory containing {@code .workspace.json}.
-     * @return An array of absolute project paths.
-     */
     public static String[] workspaceProjectPaths(java.nio.file.Path workspacePath)
             throws com.sensmetry.sysand.exceptions.SysandException {
         return workspaceProjectPaths(workspacePath.toString());
     }
 
     /**
-     * Set the index field in a project's {@code .meta.json} file,
-     * overwriting any existing index contents.
-     *
-     * @param projectPath The path to the project directory.
-     * @param index       A map of symbol names to file paths.
+     * Set the index field in a project's .meta.json file.
      */
     private static native void setProjectIndex(String projectPath, java.util.LinkedHashMap<String, String> index)
             throws com.sensmetry.sysand.exceptions.SysandException;
 
-    /**
-     * Set the index field in a project's {@code .meta.json} file,
-     * overwriting any existing index contents.
-     *
-     * @param projectPath The path to the project directory.
-     * @param index       A map of symbol names to file paths.
-     */
-    public static void setProjectIndex(java.nio.file.Path projectPath, java.util.LinkedHashMap<String, String> index)
+    public static void setProjectIndex(java.nio.file.Path projectPath,
+            java.util.LinkedHashMap<String, String> index)
             throws com.sensmetry.sysand.exceptions.SysandException {
         setProjectIndex(projectPath.toString(), index);
     }
 
     /**
-     * Build Model Project Interchange file (.kpar) from the project at the given
-     * path.
-     *
-     * @param outputPath  The path to the output file.
-     * @param projectPath The path to the project.
+     * Build a KPAR archive from a project.
      */
     private static native void buildProject(String outputPath, String projectPath, String compression)
             throws com.sensmetry.sysand.exceptions.SysandException;
 
-    /**
-     * Build Model Project Interchange file (.kpar) from the project at the given
-     * path.
-     *
-     * @param outputPath  The path to the output file.
-     * @param projectPath The path to the project.
-     */
-    public static void buildProject(java.nio.file.Path outputPath, java.nio.file.Path projectPath, com.sensmetry.sysand.model.CompressionMethod compression)
+    public static void buildProject(java.nio.file.Path outputPath, java.nio.file.Path projectPath,
+            com.sensmetry.sysand.model.CompressionMethod compression)
             throws com.sensmetry.sysand.exceptions.SysandException {
         buildProject(outputPath.toString(), projectPath.toString(), compression.toString());
     }
 
     /**
-     * Build Model Project Interchange file (.kpar) from the workspace at the given
-     * path.
-     *
-     * @param outputPath  The path to the output file.
-     * @param workspacePath The path to the workspace.
+     * Build KPAR archives for all projects in a workspace.
      */
     private static native void buildWorkspace(String outputPath, String workspacePath, String compression)
             throws com.sensmetry.sysand.exceptions.SysandException;
 
-    /**
-     * Build Model Project Interchange file (.kpar) from the workspace at the given
-     * path.
-     *
-     * @param outputPath  The path to the output file.
-     * @param workspacePath The path to the workspace.
-     */
-    public static void buildWorkspace(java.nio.file.Path outputPath, java.nio.file.Path workspacePath, com.sensmetry.sysand.model.CompressionMethod compression)
+    public static void buildWorkspace(java.nio.file.Path outputPath, java.nio.file.Path workspacePath,
+            com.sensmetry.sysand.model.CompressionMethod compression)
             throws com.sensmetry.sysand.exceptions.SysandException {
         buildWorkspace(outputPath.toString(), workspacePath.toString(), compression.toString());
     }
