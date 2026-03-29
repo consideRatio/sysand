@@ -6,7 +6,7 @@ see `public-api.md`.
 
 ## Locate
 
-The library provides `project::locate(path)` and
+The library provides `locate(path)` and
 `workspace::locate(path)` — explicit operations that walk up from a
 given path to find `.project.json` or `.workspace.json` respectively.
 
@@ -16,7 +16,7 @@ given path to find `.project.json` or `.workspace.json` respectively.
   the result
 
 ```rust
-let path = project::locate("./deeply/nested/dir")?;
+let path = locate("./deeply/nested/dir")?;
 let ctx = ProjectContext::new(path);
 ```
 

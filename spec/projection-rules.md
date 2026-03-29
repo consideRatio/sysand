@@ -10,12 +10,16 @@ up — just by applying these rules.
 Every segment in the CLI command path becomes a namespace level.
 No renaming, no special cases.
 
-| CLI                         | Rust                     | Java                              | JS/WASM                       | Python                        |
-| --------------------------- | ------------------------ | --------------------------------- | ----------------------------- | ----------------------------- |
-| `sysand project init`       | `project::init()`        | `client.project().init()`         | `sysand.project.init()`       | `sysand.project.init()`       |
-| `sysand project source add` | `project::source::add()` | `client.project().source().add()` | `sysand.project.source.add()` | `sysand.project.source.add()` |
-| `sysand env install`        | `env::install()`         | `client.env().install()`          | `sysand.env.install()`        | `sysand.env.install()`        |
-| `sysand project usage add`  | `project::usage::add()`  | `client.project().usage().add()`  | `sysand.project.usage.add()`  | `sysand.project.usage.add()`  |
+| CLI                    | Rust               | Java                        | JS/WASM                  | Python                   |
+| ---------------------- | ------------------ | --------------------------- | ------------------------ | ------------------------ |
+| `sysand init`          | `init()`           | `client.init()`             | `sysand.init()`          | `sysand.init()`          |
+| `sysand source add`    | `source::add()`    | `client.source().add()`     | `sysand.source.add()`    | `sysand.source.add()`    |
+| `sysand usage add`     | `usage::add()`     | `client.usage().add()`      | `sysand.usage.add()`     | `sysand.usage.add()`     |
+| `sysand env install`   | `env::install()`   | `client.env().install()`    | `sysand.env.install()`   | `sysand.env.install()`   |
+
+Project lifecycle commands (`init`, `locate`, `clone`, `build`) are
+root-level — no namespace prefix. `source`, `usage`, `lock`, `env`,
+and `workspace` remain namespaced.
 
 If this structural mapping feels awkward for a command, the command is
 designed wrong.

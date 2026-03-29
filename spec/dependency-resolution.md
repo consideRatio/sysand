@@ -94,12 +94,12 @@ doesn't need config or index access for already-locked dependencies.
 | ------------------------------------- | ----- | ----------------------------- |
 | `lock update`                         | Yes   | No                            |
 | `env sync`                            | No    | Yes                           |
-| `project usage add --update manifest` | No    | No                            |
-| `project usage add --update lock`     | Yes   | No                            |
-| `project usage add --update sync`     | Yes   | Yes                           |
+| `usage add --update manifest`         | No    | No                            |
+| `usage add --update lock`             | Yes   | No                            |
+| `usage add --update sync`             | Yes   | Yes                           |
 | `env install`                         | No    | Installs one package directly |
 
-`project usage add` with `--update manifest` only edits `.project.json`.
+`usage add` with `--update manifest` only edits `.project.json`.
 With `--update lock`, it also re-runs the solver. With `--update sync`
 (the default), it re-runs the solver and syncs the environment.
 

@@ -47,7 +47,7 @@ decisions:
 ## Terminology
 
 - **Usage** (not "dependency") — the KerML/SysML term for a project's
-  dependencies. The CLI commands are `sysand project usage add|remove`.
+  dependencies. The CLI commands are `sysand usage add|remove`.
 - **Interchange project** (not "package") — the unit of packaging
   (`.project.json` + `.meta.json` + source files).
 - **IRI** — unique identity of a project (e.g., `urn:kpar:sensors`). A
@@ -61,10 +61,12 @@ decisions:
 ## CLI Command Namespaces
 
 ```
-sysand project ...    Local project lifecycle, sources, usages, building
-sysand lock ...       Lockfile operations
-sysand env ...        Environment creation, sync, install/uninstall
-sysand workspace ...  Workspace operations
+sysand init|locate|clone|build   Project lifecycle (root level)
+sysand source ...                Project source file management
+sysand usage ...                 Project usage (dependency) management
+sysand lock ...                  Lockfile operations
+sysand env ...                   Environment creation, sync, install/uninstall
+sysand workspace ...             Workspace operations
 ```
 
 See `spec/public-api.md` for the full API across all surfaces.

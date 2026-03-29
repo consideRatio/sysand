@@ -2,6 +2,17 @@
 
 Decisions made and their outcomes, in reverse chronological order.
 
+## 2026-03-29
+
+- **`project` namespace removed** — Project lifecycle commands (`init`,
+  `locate`, `clone`, `build`) promoted to root level: `sysand init`,
+  `sysand build`, etc. `source` and `usage` become root-level
+  namespaces (`sysand source add`, `sysand usage add`). `workspace`,
+  `lock`, and `env` remain namespaced. Rationale: project operations
+  are the most common commands; the `project` prefix added typing cost
+  without aiding disambiguation. `source` and `usage` stay namespaced
+  because their `add`/`remove` verbs would collide at root level.
+
 ## 2026-03-28
 
 - **JS/WASM projection rules defined** — Plain objects everywhere (no

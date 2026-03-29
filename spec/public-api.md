@@ -42,7 +42,7 @@ Controls how `sysand.toml` is loaded.
 
 ### UpdateMode
 
-Controls side-effects of `project usage add`.
+Controls side-effects of `usage add`.
 
 | Surface | Shape                                                       |
 | ------- | ----------------------------------------------------------- |
@@ -204,7 +204,7 @@ See `error-model.md`. All operations return errors through this type.
 
 ### BuildOutput
 
-Returned by `project build`. Workspace build returns a list of these.
+Returned by `build`. Workspace build returns a list of these.
 
 | Field     | Type   | Notes                                     |
 | --------- | ------ | ----------------------------------------- |
@@ -243,28 +243,30 @@ Every function takes context as its first argument, required operands
 next, then an options struct. Projection rules (`projection-rules.md`)
 map CLI command paths to namespaces mechanically.
 
-### project
+### Root Commands
 
-| Command | CLI                                      | Rust                                                       | Java                                    | JS/WASM                                | Python                                  |
-| ------- | ---------------------------------------- | ---------------------------------------------------------- | --------------------------------------- | -------------------------------------- | --------------------------------------- |
-| init    | `sysand project init <PATH> [opts]`      | `project::init(path, InitOptions) → Result<()>`            | `client.project().init(path, opts)`     | `sysand.project.init(path, opts?)`     | `sysand.project.init(path, **opts)`     |
-| locate  | `sysand project locate [--project PATH]` | `project::locate(path) → Result<Utf8PathBuf>`              | `client.project().locate(path)`         | `sysand.project.locate(path)`          | `sysand.project.locate(path)`           |
-| clone   | `sysand project clone <LOCATOR> [opts]`  | `project::clone(locator, CloneOptions) → Result<()>`       | `client.project().clone(locator, opts)` | `sysand.project.clone(locator, opts?)` | `sysand.project.clone(locator, **opts)` |
-| build   | `sysand project build [opts]`            | `project::build(&ctx, BuildOptions) → Result<BuildOutput>` | `client.project().build(ctx, opts)`     | `sysand.project.build(ctx, opts?)`     | `sysand.project.build(ctx, **opts)`     |
+Project operations live at the root level — no `project` namespace.
 
-#### project source
+| Command | CLI                                | Rust                                              | Java                              | JS/WASM                          | Python                            |
+| ------- | ---------------------------------- | ------------------------------------------------- | --------------------------------- | -------------------------------- | --------------------------------- |
+| init    | `sysand init <PATH> [opts]`        | `init(path, InitOptions) → Result<()>`            | `client.init(path, opts)`         | `sysand.init(path, opts?)`       | `sysand.init(path, **opts)`       |
+| locate  | `sysand locate [--project PATH]`   | `locate(path) → Result<Utf8PathBuf>`              | `client.locate(path)`             | `sysand.locate(path)`            | `sysand.locate(path)`             |
+| clone   | `sysand clone <LOCATOR> [opts]`    | `clone(locator, CloneOptions) → Result<()>`       | `client.clone(locator, opts)`     | `sysand.clone(locator, opts?)`   | `sysand.clone(locator, **opts)`   |
+| build   | `sysand build [opts]`              | `build(&ctx, BuildOptions) → Result<BuildOutput>` | `client.build(ctx, opts)`         | `sysand.build(ctx, opts?)`       | `sysand.build(ctx, **opts)`       |
 
-| Command | CLI                                             | Rust                                                               | Java                                              | JS/WASM                                        | Python                                          |
-| ------- | ----------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------- |
-| add     | `sysand project source add <PATH>... [opts]`    | `project::source::add(&ctx, paths, SourceAddOptions) → Result<()>` | `client.project().source().add(ctx, paths, opts)` | `sysand.project.source.add(ctx, paths, opts?)` | `sysand.project.source.add(ctx, paths, **opts)` |
-| remove  | `sysand project source remove <PATH>... [opts]` | `project::source::remove(&ctx, paths) → Result<()>`                | `client.project().source().remove(ctx, paths)`    | `sysand.project.source.remove(ctx, paths)`     | `sysand.project.source.remove(ctx, paths)`      |
+### source
 
-#### project usage
+| Command | CLI                                       | Rust                                                      | Java                                    | JS/WASM                                  | Python                                    |
+| ------- | ----------------------------------------- | --------------------------------------------------------- | --------------------------------------- | ---------------------------------------- | ----------------------------------------- |
+| add     | `sysand source add <PATH>... [opts]`      | `source::add(&ctx, paths, SourceAddOptions) → Result<()>` | `client.source().add(ctx, paths, opts)` | `sysand.source.add(ctx, paths, opts?)`   | `sysand.source.add(ctx, paths, **opts)`   |
+| remove  | `sysand source remove <PATH>... [opts]`   | `source::remove(&ctx, paths) → Result<()>`                | `client.source().remove(ctx, paths)`    | `sysand.source.remove(ctx, paths)`       | `sysand.source.remove(ctx, paths)`        |
 
-| Command | CLI                                                   | Rust                                                           | Java                                           | JS/WASM                                     | Python                                       |
-| ------- | ----------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------- | -------------------------------------------- |
-| add     | `sysand project usage add <IRI> [VERSION_REQ] [opts]` | `project::usage::add(&ctx, iri, UsageAddOptions) → Result<()>` | `client.project().usage().add(ctx, iri, opts)` | `sysand.project.usage.add(ctx, iri, opts?)` | `sysand.project.usage.add(ctx, iri, **opts)` |
-| remove  | `sysand project usage remove <IRI> [opts]`            | `project::usage::remove(&ctx, iri) → Result<()>`               | `client.project().usage().remove(ctx, iri)`    | `sysand.project.usage.remove(ctx, iri)`     | `sysand.project.usage.remove(ctx, iri)`      |
+### usage
+
+| Command | CLI                                             | Rust                                                      | Java                                     | JS/WASM                                | Python                                  |
+| ------- | ----------------------------------------------- | --------------------------------------------------------- | ---------------------------------------- | -------------------------------------- | --------------------------------------- |
+| add     | `sysand usage add <IRI> [VERSION_REQ] [opts]`   | `usage::add(&ctx, iri, UsageAddOptions) → Result<()>`     | `client.usage().add(ctx, iri, opts)`     | `sysand.usage.add(ctx, iri, opts?)`    | `sysand.usage.add(ctx, iri, **opts)`    |
+| remove  | `sysand usage remove <IRI> [opts]`              | `usage::remove(&ctx, iri) → Result<()>`                   | `client.usage().remove(ctx, iri)`        | `sysand.usage.remove(ctx, iri)`        | `sysand.usage.remove(ctx, iri)`         |
 
 ### lock
 
@@ -392,11 +394,15 @@ options struct. Options shared across commands are composed in via
 ### Grammar
 
 ```
-sysand [GLOBAL_OPTIONS] <namespace> [<resource>...] <verb> [OPERANDS...] [OPTIONS...]
+sysand [GLOBAL_OPTIONS] [<namespace>] <verb> [OPERANDS...] [OPTIONS...]
 ```
 
-- Namespace and resource tokens are nouns (`project`, `source`,
-  `usage`, `env`, `workspace`)
+- Project operations (`init`, `locate`, `clone`, `build`) are root
+  verbs — no namespace prefix
+- `source` and `usage` are root-level namespaces for project manifest
+  operations
+- `lock`, `env`, and `workspace` are namespaces for non-project
+  operations
 - The final token in the command path is always the verb (`add`,
   `remove`, `update`, `sync`, `create`, `init`, `build`, `locate`)
 - Required data is positional operands
@@ -414,7 +420,9 @@ sysand [GLOBAL_OPTIONS] <namespace> [<resource>...] <verb> [OPERANDS...] [OPTION
 
 | Namespace   | Purpose                                                |
 | ----------- | ------------------------------------------------------ |
-| `project`   | Local project lifecycle, sources, usages               |
+| (root)      | Project lifecycle: `init`, `locate`, `clone`, `build`  |
+| `source`    | Project source file management                         |
+| `usage`     | Project usage (dependency) management                  |
 | `lock`      | Lockfile operations                                    |
 | `env`       | Environment creation, sync, install/uninstall, listing |
 | `workspace` | Workspace operations                                   |
@@ -430,13 +438,20 @@ These exist only in the CLI surface:
 
 ## Rationale
 
-**Why noun-verb grammar.** The grammar
-`sysand <namespace> [<resource>] <verb>` ensures every command path
-segment maps structurally to a namespace in all binding surfaces. Verbs
-as subcommands (not flags) guarantee one command = one return shape,
-which means bindings can be generated mechanically. The alternative —
-flags that change behavior (e.g., `--set` vs `--get` on the same
-command) — would require per-flag return type logic in every surface.
+**Why project operations are root-level.** Project operations (`init`,
+`build`, `clone`, `locate`) are the most common commands. A `project`
+namespace prefix adds typing cost without aiding disambiguation — these
+verbs don't collide with `env`, `lock`, or `workspace` commands.
+`source` and `usage` remain namespaced because their verbs (`add`,
+`remove`) would otherwise collide with each other. `workspace` stays
+namespaced because `build` and `locate` overlap with the root verbs,
+and workspace operations are less frequent.
+
+**Why noun-verb grammar.** Verbs as subcommands (not flags) guarantee
+one command = one return shape, which means bindings can be generated
+mechanically. The alternative — flags that change behavior (e.g.,
+`--set` vs `--get` on the same command) — would require per-flag
+return type logic in every surface.
 
 **Why field-level accessors were removed.** An earlier design had
 `project info name get`, `project info name set`, `project metadata`
@@ -460,6 +475,7 @@ still apply — they're used internally by the solver.
 `env list` was kept because it inspects actual installed state in
 `sysand_env/`, which isn't a simple file read.
 
-**Why usage moved under project.** Usages live in `.project.json`,
-same as sources. `project usage add` is structurally parallel to
-`project source add`, and both operate on the same manifest file.
+**Why `source` and `usage` are namespaces, not root verbs.** Both have
+`add` and `remove` verbs that would collide at the root level.
+Namespacing them as `source add` / `usage add` keeps the commands
+parallel and unambiguous.
