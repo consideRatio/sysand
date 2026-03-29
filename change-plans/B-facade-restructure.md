@@ -173,16 +173,18 @@ or `sysand_core::types::options::InitOptions`. The spec's flat re-export
 `#[allow(dead_code)]` doc comments. `enumerate_projects_lock` is dead
 code — delete it. `do_root` is superseded by `facade/locate.rs`.
 
-### Step 7 (deferred): Move existing code to `internal/`
+### Step 7: Document `internal/` boundary (DONE)
 
-This is the mechanical move that restricts visibility. Deferred because:
+Rather than physically moving files (high risk, breaks all consumers),
+we created `core/src/internal.rs` as documentation of the intended
+boundary. It lists all modules that belong in `internal/` and explains
+that the physical move happens after consumers fully migrate to the
+facade.
 
-- Requires updating all `use crate::` paths within core (~200+ lines)
-- Requires shim re-exports in lib.rs for backward compat with
-  CLI/bindings
-- Risk of breaking all consumers simultaneously
-
-Do this after the CLI and bindings are updated to use the facade.
+**Lesson:** The physical move is not worth doing until all consumers
+(CLI, Java, Python, JS) exclusively use the facade. Currently the CLI
+still imports from `sysand_core::commands::*`, `sysand_core::project::*`,
+etc. directly. The boundary is communicated via the doc file for now.
 
 ## Resolved Questions
 

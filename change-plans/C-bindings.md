@@ -489,14 +489,37 @@ tests for newly-bound commands.
 10. **Every new WASM command needs 3 touch points:** Rust export in
     `lib.rs`, re-export in `src/sysand.js`, type in `src/sysand.d.ts`.
 
+## Additional Implementation (completed after initial plan)
+
+### JS/WASM: all non-network commands bound
+
+Added: `source_add`, `source_remove`, `usage_add`, `usage_remove`,
+`env_list`, `env_uninstall`. All use facade functions with browser
+localStorage backend.
+
+Needed `From<env::local_storage::Error> for SysandError` in addition
+to the project storage error impl. Error conversion now returns
+structured `{ code, message, context }` JS objects.
+
+`js-sys` added as conditional dependency (`browser` feature).
+
+### Java: exception classes and info removed
+
+Deleted 9 exception .java files. Removed `infoPath`/`info` from
+`Sysand.java`. Updated all tests to use direct file reads instead
+of info API. `testBasicInfo` test removed entirely.
+
+### Java accessor chain
+
+Not implemented — Java still uses static methods on `Sysand` class.
+The `client.source().add()` pattern requires Java-side inner classes
+or accessor objects. This is a Java-only change (no Rust changes)
+and is lower priority since the Rust JNI side already uses the facade.
+
 ## Resolved Risks
 
 - **JS/WASM namespace:** Resolved via `src/sysand.js` wrapper pattern.
 - **Python submodule import:** Not needed — existing Python wrapper
   package handles namespacing.
-- **Java accessor chain:** Not yet implemented — Java still uses static
-  methods on `Sysand` class. The `client.source().add()` pattern is
-  a future step (Java-side restructure).
 - **Resolver assembly duplication:** Confirmed as a real concern — any
-  binding wanting lock/sync needs the resolver assembly logic that
-  currently lives in the CLI crate.
+  binding wanting lock/sync needs the resolver assembly logic.
