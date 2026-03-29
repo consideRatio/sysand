@@ -509,12 +509,27 @@ Deleted 9 exception .java files. Removed `infoPath`/`info` from
 `Sysand.java`. Updated all tests to use direct file reads instead
 of info API. `testBasicInfo` test removed entirely.
 
-### Java accessor chain
+### Java accessor chain (DONE)
 
-Not implemented — Java still uses static methods on `Sysand` class.
-The `client.source().add()` pattern requires Java-side inner classes
-or accessor objects. This is a Java-only change (no Rust changes)
-and is lower priority since the Rust JNI side already uses the facade.
+`SysandClient` class added with accessor pattern:
+```java
+SysandClient client = new SysandClient();
+client.init(name, publisher, version, license, path);
+client.build(outputPath, projectPath, compression);
+client.env().create(path);
+client.env().defaultName();
+client.workspace().projectPaths(path);
+client.workspace().build(outputPath, workspacePath, compression);
+client.source()  // namespace accessor — methods TBD
+```
+
+Inner classes: `SysandClient.Source`, `SysandClient.Env`,
+`SysandClient.Workspace`. Each delegates to `Sysand` static native
+methods. Original `Sysand` class retained for backward compat.
+
+**Lesson:** Pure Java change — no Rust/JNI changes needed. The
+accessor pattern is just Java wrapper methods calling existing native
+statics. Tests updated to use `SysandClient` with `@BeforeAll` setup.
 
 ## Resolved Risks
 
