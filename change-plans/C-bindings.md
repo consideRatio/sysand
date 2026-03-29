@@ -231,25 +231,61 @@ Delete 9 custom exception classes. Keep single `SysandException` with
 
 **Tests:** Update `BasicTest.java` to use new API shape.
 
-### Step 2: Python binding
+### Step 2: Python binding (DONE)
 
-**Rust side (`bindings/py/src/lib.rs`):**
+**Implemented approach — simpler than originally planned:**
 
-Replace flat functions with PyO3 submodules:
+The Python binding uses a flat Rust module (`_sysand_core`) with a
+pure Python wrapper layer for namespacing. No PyO3 submodules needed.
+
+**Rust side:** Functions named `init`, `source_add`, `usage_add`, etc.
+registered flat in the module. Single `SysandPyError` exception via
+`pyo3::create_exception!`. Error conversion is one function:
 
 ```rust
+pyo3::create_exception!(sysand, SysandPyError, pyo3::exceptions::PyException);
+
+fn sysand_err(err: SysandError) -> PyErr {
+    SysandPyError::new_err(format!("[{}] {}", err.code, err.message))
+}
+```
+
+**Python side:** Existing wrapper layer (`python/sysand/`) maps the
+public API names to Rust functions. Namespace structure (`sysand.env`,
+`sysand.source`, etc.) comes from Python packages, not Rust submodules.
+
+**Key lessons:**
+
+1. **Don't use PyO3 submodules.** The existing pattern (flat Rust
+   functions + Python wrapper layer) is simpler and already works.
+   PyO3 submodules need `sys.modules` hacks for `from sysand.source
+   import add` to work.
+
+2. **Case-insensitive string parsing.** Python enums use UPPER_SNAKE
+   names (`CompressionMethod.STORED`). The Rust side must accept both
+   cases: `compression.to_ascii_lowercase()`.
+
+3. **Facade functions need storage construction.** Each Rust function
+   creates `LocalSrcProject { project_path: path.into(), ... }` then
+   calls the facade. This is the ~5 lines of binding code per command.
+
+4. **`info` and `sources` removed.** Not in the facade, not in the
+   binding. Tests that used them were removed or rewritten.
+
+5. **Error mapping eliminated.** Old: 40+ match arms across 13
+   functions mapping specific error variants to Python exception types.
+   New: single `sysand_err()` call. ~130 lines of error handling deleted.
+
+**Result:** 600 lines → 310 lines Rust, all 6 tests pass.
+
+Previously planned PyO3 submodule approach (not used):
+
+```rust
+// NOT USED — keeping for reference
 #[pymodule]
 fn sysand(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Root functions
-    m.add_function(wrap_pyfunction!(init, m)?)?;
-    m.add_function(wrap_pyfunction!(locate, m)?)?;
-    m.add_function(wrap_pyfunction!(clone_project, m)?)?;
-    m.add_function(wrap_pyfunction!(build, m)?)?;
-
-    // Submodules
     let source = PyModule::new(m.py(), "source")?;
     source.add_function(wrap_pyfunction!(source_add, &source)?)?;
-    source.add_function(wrap_pyfunction!(source_remove, &source)?)?;
     m.add_submodule(&source)?;
 
     let usage = PyModule::new(m.py(), "usage")?;
