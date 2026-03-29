@@ -99,7 +99,7 @@ fn build(
         nominal_path: None,
         project_path: project_path.into(),
     };
-    let compression = match compression.as_deref() {
+    let compression = match compression.as_deref().map(|s| s.to_ascii_lowercase()).as_deref() {
         Some("stored") => Compression::Stored,
         Some("deflated") | None => Compression::Deflated,
         Some("bzip2") => Compression::Bzip2,
