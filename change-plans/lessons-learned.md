@@ -31,6 +31,12 @@ These are the commands users actually run. The building blocks
 (`install_project`, `clone_project`) can exist for advanced use cases
 but they shouldn't be the primary facade.
 
+**Status:** `facade::env::install` now covers the full IRI-based
+orchestration (resolve → lock → sync). `env_install_path` (local path
+install with deps) and `clone` still use internal types for
+`EditableProject` + `do_lock_projects`. `add` still uses `Lock::Source`
+variants for config source matching.
+
 **If re-executing:** Design facade functions top-down from user
 commands, not bottom-up from internal function signatures. Ask "what
 does `sysand env install urn:x ^1.0` do end-to-end?" and make the
