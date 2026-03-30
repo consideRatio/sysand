@@ -31,11 +31,17 @@ These are the commands users actually run. The building blocks
 (`install_project`, `clone_project`) can exist for advanced use cases
 but they shouldn't be the primary facade.
 
-**Status:** `facade::env::install` now covers the full IRI-based
-orchestration (resolve → lock → sync). `env_install_path` (local path
-install with deps) and `clone` still use internal types for
-`EditableProject` + `do_lock_projects`. `add` still uses `Lock::Source`
-variants for config source matching.
+**Status (resolved):** All full orchestrations now in facade:
+- `facade::env::install` — IRI-based resolve → lock → sync
+- `facade::env::install_from_path` — path-based with deps
+- `facade::clone::clone_with_deps` — lock + sync after clone
+
+The CLI still imports ~15 core types, but these are all *vocabulary
+types* (Config, Lock, Source, Workspace, ProjectContext) and
+*infrastructure* (discovery, config loading, auth building, HTTP
+client). These are legitimately public — they're not implementation
+details. The `internal/` move should only cover command implementations
+and resolver/solver internals, not these types.
 
 **If re-executing:** Design facade functions top-down from user
 commands, not bottom-up from internal function signatures. Ask "what
