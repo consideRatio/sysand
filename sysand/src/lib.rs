@@ -22,21 +22,14 @@ use fluent_uri::Iri;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
 use sysand_core::{
-    auth::{HTTPAuthentication, StandardHTTPAuthenticationBuilder},
+    auth::StandardHTTPAuthenticationBuilder,
     commands::lock::DEFAULT_LOCKFILE_NAME,
-    config::{
-        Config,
-        local_fs::{get_config, load_configs},
-    },
+    config::{Config, local_fs::{get_config, load_configs}},
     context::ProjectContext,
     discover::{discover_project, discover_workspace},
     env::local_directory::{DEFAULT_ENV_NAME, LocalDirectoryEnvironment},
     lock::Lock,
-    project::{
-        any::{AnyProject, OverrideProject},
-        reference::ProjectReference,
-        utils::wrapfs,
-    },
+    project::utils::wrapfs,
     resolve::net_utils::create_reqwest_client,
     stdlib::known_std_libs,
     workspace::Workspace,
@@ -261,6 +254,13 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
     }
     let basic_auth_policy = Arc::new(auths_builder.build()?);
 
+    let net = sysand_core::types::network::NetworkContext::with_client(
+        config.clone(),
+        basic_auth_policy.clone(),
+        client.clone(),
+        runtime.clone(),
+    );
+
     match args.command {
         Command::Init {
             path,
@@ -301,11 +301,11 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                         path,
                         install_opts,
                         resolution_opts,
-                        &config,
+                        &net.config,
                         project_root,
-                        client,
-                        runtime,
-                        basic_auth_policy,
+                        net.client.clone(),
+                        net.runtime.clone(),
+                        net.auth.clone(),
                         ctx,
                     )
                 } else {
@@ -314,11 +314,11 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                         version,
                         install_opts,
                         resolution_opts,
-                        &config,
+                        &net.config,
                         project_root,
-                        client,
-                        runtime,
-                        basic_auth_policy,
+                        net.client.clone(),
+                        net.runtime.clone(),
+                        net.auth.clone(),
                         ctx,
                     )
                 }
@@ -356,11 +356,8 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                             command_lock(
                                 ".",
                                 resolution_opts,
-                                &config,
+                                &net,
                                 &project_root,
-                                client.clone(),
-                                runtime.clone(),
-                                basic_auth_policy.clone(),
                                 ctx,
                             )?
                         } else {
@@ -372,10 +369,8 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                     &lock,
                     project_root,
                     &mut local_environment,
-                    client,
+                    &net,
                     &provided_iris,
-                    runtime,
-                    basic_auth_policy,
                 )
             }
         },
@@ -384,11 +379,8 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                 crate::commands::lock::command_lock(
                     ".",
                     resolution_opts,
-                    &config,
+                    &net,
                     project_root,
-                    client,
-                    runtime,
-                    basic_auth_policy,
                     ctx,
                 )
                 .map(|_| ())
@@ -415,13 +407,13 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                 no_sync,
                 resolution_opts,
                 source_opts,
-                config,
+                net.config.clone(),
                 config_file_for_compat(&args.global_opts.config),
                 args.global_opts.config == "none",
                 ctx,
-                client,
-                runtime,
-                basic_auth_policy,
+                net.client.clone(),
+                net.runtime.clone(),
+                net.auth.clone(),
             )
         }
         Command::Usage(cli::UsageCommand::Remove { locator }) => {
@@ -501,10 +493,10 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
             ctx,
             deps == "none",
             resolution_opts,
-            &config,
-            client,
-            runtime,
-            basic_auth_policy,
+            &net.config,
+            net.client.clone(),
+            net.runtime.clone(),
+            net.auth.clone(),
         ),
     }
 }
@@ -558,30 +550,3 @@ fn get_log_level(verbose: bool, quiet: bool) -> log::LevelFilter {
     }
 }
 
-pub type Overrides<Policy> = Vec<(Iri<String>, Vec<OverrideProject<Policy>>)>;
-
-pub fn get_overrides<P: AsRef<Utf8Path>, Policy: HTTPAuthentication>(
-    config: &Config,
-    project_root: P,
-    client: &reqwest_middleware::ClientWithMiddleware,
-    runtime: Arc<tokio::runtime::Runtime>,
-    auth_policy: Arc<Policy>,
-) -> Result<Overrides<Policy>> {
-    let mut overrides = Vec::new();
-    for config_project in &config.projects {
-        for identifier in &config_project.identifiers {
-            let mut projects = Vec::new();
-            for source in &config_project.sources {
-                projects.push(ProjectReference::new(AnyProject::try_from_source(
-                    source.clone(),
-                    &project_root,
-                    auth_policy.clone(),
-                    client.clone(),
-                    runtime.clone(),
-                )?));
-            }
-            overrides.push((Iri::parse(identifier.as_str())?.into(), projects));
-        }
-    }
-    Ok(overrides)
-}

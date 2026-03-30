@@ -27,7 +27,7 @@ use sysand_core::{
 use crate::{
     CliError, DEFAULT_INDEX_URL,
     cli::{ProjectSourceOptions, ResolutionOptions},
-    commands::{lock::create_resolver, sync::command_sync},
+    commands::sync::command_sync,
 };
 
 // TODO: Collect common arguments
@@ -246,17 +246,28 @@ fn resolve_deps<P: AsRef<Utf8Path>, Policy: HTTPAuthentication>(
     provided_iris: HashMap<String, Vec<sysand_core::project::memory::InMemoryProject>>,
     ctx: &ProjectContext,
 ) -> Result<(), anyhow::Error> {
-    // FIXME: use path relative to workspace root.
-    let resolver = create_resolver(
-        ".",
-        resolution_opts,
+    let net = sysand_core::types::network::NetworkContext::with_client(
+        config.clone(),
+        auth_policy,
+        client,
+        runtime,
+    );
+
+    let index_urls = sysand_core::facade::resolver::resolve_index_urls(
         config,
-        &project_root,
-        provided_iris.clone(),
-        client.clone(),
-        runtime.clone(),
-        auth_policy.clone(),
+        resolution_opts.index,
+        resolution_opts.default_index,
+        &resolution_opts.index_mode,
+        DEFAULT_INDEX_URL,
     )?;
+
+    let resolver = sysand_core::facade::resolver::build_resolver(
+        camino::Utf8Path::new("."),
+        &net,
+        index_urls,
+        provided_iris.clone(),
+    )?;
+
     let LockOutcome { lock, .. } = do_lock_local_editable(
         ".",
         &project_root,
@@ -272,15 +283,7 @@ fn resolve_deps<P: AsRef<Utf8Path>, Policy: HTTPAuthentication>(
     )?;
     if !no_sync {
         let mut env = crate::get_or_create_env(&project_root)?;
-        command_sync(
-            &lock,
-            project_root,
-            &mut env,
-            client,
-            &provided_iris,
-            runtime,
-            auth_policy,
-        )?;
+        command_sync(&lock, project_root, &mut env, &net, &provided_iris)?;
     }
     Ok(())
 }

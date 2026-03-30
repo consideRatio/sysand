@@ -32,8 +32,35 @@ use crate::{
     DEFAULT_INDEX_URL,
     cli::{InstallOptions, ResolutionOptions},
     commands::sync::command_sync,
-    get_overrides,
 };
+
+// Inlined from facade::resolver since env install does its own resolver assembly
+fn get_overrides<P: AsRef<Utf8Path>, Policy: HTTPAuthentication>(
+    config: &Config,
+    project_root: P,
+    client: &reqwest_middleware::ClientWithMiddleware,
+    runtime: Arc<tokio::runtime::Runtime>,
+    auth_policy: Arc<Policy>,
+) -> Result<Vec<(Iri<String>, Vec<sysand_core::project::any::OverrideProject<Policy>>)>> {
+    use sysand_core::project::{any::AnyProject, reference::ProjectReference};
+    let mut overrides = Vec::new();
+    for config_project in &config.projects {
+        for identifier in &config_project.identifiers {
+            let mut projects = Vec::new();
+            for source in &config_project.sources {
+                projects.push(ProjectReference::new(AnyProject::try_from_source(
+                    source.clone(),
+                    &project_root,
+                    auth_policy.clone(),
+                    client.clone(),
+                    runtime.clone(),
+                )?));
+            }
+            overrides.push((Iri::parse(identifier.as_str())?.into(), projects));
+        }
+    }
+    Ok(overrides)
+}
 
 pub fn command_env<P: AsRef<Utf8Path>>(path: P) -> Result<LocalDirectoryEnvironment> {
     Ok(do_env_local_dir(path)?)
@@ -157,15 +184,15 @@ pub fn command_env_install<Policy: HTTPAuthentication>(
         {
             crate::logger::warn_std_deps();
         }
-        command_sync(
-            &lock,
-            project_root,
-            &mut env,
-            client,
-            &provided_iris,
-            runtime,
-            auth_policy,
-        )?;
+        {{
+            let net_tmp = sysand_core::types::network::NetworkContext::with_client(
+                config.clone(),
+                auth_policy,
+                client,
+                runtime,
+            );
+            command_sync(&lock, project_root, &mut env, &net_tmp, &provided_iris)
+        }}?;
     }
 
     Ok(())
@@ -294,15 +321,15 @@ pub fn command_env_install_path<Policy: HTTPAuthentication>(
             &provided_iris,
             &ctx,
         )?;
-        command_sync(
-            &lock,
-            project_root,
-            &mut env,
-            client,
-            &provided_iris,
-            runtime,
-            auth_policy,
-        )?;
+        {{
+            let net_tmp = sysand_core::types::network::NetworkContext::with_client(
+                config.clone(),
+                auth_policy,
+                client,
+                runtime,
+            );
+            command_sync(&lock, project_root, &mut env, &net_tmp, &provided_iris)
+        }}?;
     }
 
     Ok(())

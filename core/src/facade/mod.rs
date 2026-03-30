@@ -13,6 +13,7 @@ pub mod usage;
 pub mod env;
 pub mod lock;
 pub mod clone;
+pub mod resolver;
 
 #[cfg(feature = "filesystem")]
 pub mod build;

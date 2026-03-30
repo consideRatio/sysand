@@ -27,6 +27,7 @@ use crate::{
     get_or_create_env,
 };
 
+
 pub enum ProjectLocator {
     Iri(Iri<String>),
     Path(Utf8PathBuf),
@@ -139,15 +140,15 @@ pub fn command_clone<Policy: HTTPAuthentication>(
         )?;
 
         let mut env = get_or_create_env(&project.inner().project_path)?;
-        command_sync(
-            &lock,
-            &project.inner().project_path,
-            &mut env,
-            client,
-            &provided_iris,
-            runtime,
-            auth_policy,
-        )?;
+        {
+            let net_tmp = sysand_core::types::network::NetworkContext::with_client(
+                config.clone(),
+                auth_policy,
+                client,
+                runtime,
+            );
+            command_sync(&lock, &project.inner().project_path, &mut env, &net_tmp, &provided_iris)?;
+        }
     }
 
     Ok(())

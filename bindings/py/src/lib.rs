@@ -218,7 +218,9 @@ fn usage_remove(project_path: String, iri: String) -> PyResult<()> {
         nominal_path: None,
         project_path: project_path.into(),
     };
-    sysand_core::facade::usage::remove(&mut project, &iri).map_err(sysand_err)
+    sysand_core::facade::usage::remove(&mut project, &iri)
+        .map(|_| ())
+        .map_err(sysand_err)
 }
 
 // ---------------------------------------------------------------------------
