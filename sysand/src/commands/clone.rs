@@ -7,26 +7,18 @@ use std::{collections::HashMap, fs, io::ErrorKind, sync::Arc};
 
 use sysand_core::{
     auth::HTTPAuthentication,
-    commands::lock::{DEFAULT_LOCKFILE_NAME, LockOutcome},
     config::Config,
     context::ProjectContext,
     env::utils::clone_project,
-    project::{ProjectRead, editable::EditableProject, local_src::LocalSrcProject, utils::wrapfs},
-    resolve::{
-        ResolutionOutcome, ResolveRead,
-        memory::{AcceptAll, MemoryResolver},
-        priority::PriorityResolver,
-        standard::{StandardResolver, standard_resolver},
-    },
+    project::{ProjectRead, local_src::LocalSrcProject, utils::wrapfs},
+    resolve::{ResolutionOutcome, ResolveRead, standard::standard_resolver},
+    types::network::NetworkContext,
 };
 
 use crate::{
     CliError, DEFAULT_INDEX_URL,
     cli::{CloneProjectLocatorArgs, ResolutionOptions},
-    commands::sync::command_sync,
-    get_or_create_env,
 };
-
 
 pub enum ProjectLocator {
     Iri(Iri<String>),
@@ -49,7 +41,6 @@ pub fn command_clone<Policy: HTTPAuthentication>(
 ) -> Result<()> {
     let target: Utf8PathBuf = target.unwrap_or_else(|| ".".into());
     let project_path = {
-        // Canonicalization is performed only for better error messages
         let canonical = wrapfs::absolute(&target)?;
         match fs::read_dir(&target) {
             Ok(mut dir_it) => {
@@ -72,114 +63,18 @@ pub fn command_clone<Policy: HTTPAuthentication>(
         canonical
     };
 
-    let (include_std, locator, local_project, std_resolver) = match obtain_project(
-        locator,
-        version,
-        resolution_opts,
-        config,
-        &client,
-        &runtime,
-        auth_policy.clone(),
-        project_path,
-        &ctx,
-    ) {
-        Ok(ret) => ret,
-        Err(e) => {
-            // Clean up the target dir. This is safe, since we ensured
-            // that the dir is empty before touching it
-            clean_dir(&target);
-            return Err(e);
-        }
+    let include_std = resolution_opts.include_std;
+    let index_urls = if resolution_opts.index_mode == "none" {
+        None
+    } else {
+        Some(config.index_urls(
+            resolution_opts.index,
+            vec![DEFAULT_INDEX_URL.to_string()],
+            resolution_opts.default_index,
+        )?)
     };
 
-    if !no_deps {
-        let provided_iris = if !include_std {
-            crate::known_std_libs()
-        } else {
-            HashMap::default()
-        };
-        let mut memory_projects = HashMap::default();
-        for (k, v) in provided_iris.iter() {
-            memory_projects.insert(fluent_uri::Iri::parse(k.clone()).unwrap(), v.to_vec());
-        }
-
-        let resolver = PriorityResolver::new(
-            MemoryResolver {
-                iri_predicate: AcceptAll {},
-                projects: memory_projects,
-            },
-            std_resolver,
-        );
-        let project = EditableProject::new(".".into(), local_project);
-        let identifiers = match locator {
-            ProjectLocator::Iri(iri) => Some(vec![iri]),
-            _ => None,
-        };
-        let LockOutcome {
-            lock,
-            dependencies: _dependencies,
-        } = sysand_core::commands::lock::do_lock_projects(
-            [(identifiers, &project)],
-            resolver,
-            &provided_iris,
-            &ctx,
-        )?;
-        // Warn if we have any std lib dependencies
-        if !provided_iris.is_empty()
-            && lock
-                .projects
-                .iter()
-                .any(|x| x.identifiers.iter().any(|y| provided_iris.contains_key(y)))
-        {
-            crate::logger::warn_std_deps();
-        }
-        let lock = lock.canonicalize();
-        wrapfs::write(
-            project.inner().project_path.join(DEFAULT_LOCKFILE_NAME),
-            lock.to_string(),
-        )?;
-
-        let mut env = get_or_create_env(&project.inner().project_path)?;
-        {
-            let net_tmp = sysand_core::types::network::NetworkContext::with_client(
-                config.clone(),
-                auth_policy,
-                client,
-                runtime,
-            );
-            command_sync(&lock, &project.inner().project_path, &mut env, &net_tmp, &provided_iris)?;
-        }
-    }
-
-    Ok(())
-}
-
-#[expect(clippy::too_many_arguments)]
-fn obtain_project<Policy: HTTPAuthentication>(
-    locator: CloneProjectLocatorArgs,
-    version: Option<String>,
-    resolution_opts: ResolutionOptions,
-    config: &Config,
-    client: &reqwest_middleware::ClientWithMiddleware,
-    runtime: &Arc<tokio::runtime::Runtime>,
-    auth_policy: Arc<Policy>,
-    project_path: Utf8PathBuf,
-    ctx: &ProjectContext,
-) -> Result<
-    (
-        bool,
-        ProjectLocator,
-        LocalSrcProject,
-        StandardResolver<Policy>,
-    ),
-    anyhow::Error,
-> {
-    let ResolutionOptions {
-        index,
-        default_index,
-        index_mode,
-        include_std,
-    } = resolution_opts;
+    // Warn about existing project/workspace
     if let Some(existing_project) = &ctx.current_project {
         log::warn!(
             "found an existing project in one of target path's parent\n\
@@ -196,11 +91,8 @@ fn obtain_project<Policy: HTTPAuthentication>(
             existing_workspace.root_path()
         );
     }
-    let index_urls = if index_mode == "none" {
-        None
-    } else {
-        Some(config.index_urls(index, vec![DEFAULT_INDEX_URL.to_string()], default_index)?)
-    };
+
+    // Parse locator
     let CloneProjectLocatorArgs {
         auto_location,
         iri,
@@ -218,13 +110,14 @@ fn obtain_project<Policy: HTTPAuthentication>(
     } else {
         unreachable!()
     };
+
+    let header = sysand_core::style::get_style_config().header;
     let cloning = "Cloning";
     let cloned = "Cloned";
-    let header = sysand_core::style::get_style_config().header;
 
     let mut local_project = LocalSrcProject {
         nominal_path: None,
-        project_path,
+        project_path: project_path.clone(),
     };
 
     let std_resolver = standard_resolver(
@@ -235,22 +128,19 @@ fn obtain_project<Policy: HTTPAuthentication>(
         runtime.clone(),
         auth_policy.clone(),
     );
-    match &locator {
+
+    // Clone the project files
+    let fetch_result: Result<(ProjectLocator, _)> = match &locator {
         ProjectLocator::Iri(iri) => {
             log::info!(
                 "{header}{cloning:>12}{header:#} project with IRI `{}` to\n\
                 {:>12} `{}`",
-                iri,
-                ' ',
-                local_project.project_path,
+                iri, ' ', local_project.project_path,
             );
             let (_version, storage) = get_project_version(iri, version, &std_resolver)?;
             let (info, _meta) = clone_project(&storage, &mut local_project, true)?;
-            log::info!(
-                "{header}{cloned:>12}{header:#} `{}` {}",
-                info.name,
-                info.version
-            );
+            log::info!("{header}{cloned:>12}{header:#} `{}` {}", info.name, info.version);
+            Ok((locator, std_resolver))
         }
         ProjectLocator::Path(path) => {
             let remote_project = LocalSrcProject {
@@ -263,9 +153,7 @@ fn obtain_project<Policy: HTTPAuthentication>(
                     .ok_or_else(|| anyhow!("missing project info"))?
                     .version;
                 if version != project_version {
-                    bail!(
-                        "given version {version} does not match project version {project_version}"
-                    )
+                    bail!("given version {version} does not match project version {project_version}")
                 }
             }
             log::info!(
@@ -276,20 +164,45 @@ fn obtain_project<Policy: HTTPAuthentication>(
                 local_project.project_path,
             );
             let (info, _meta) = clone_project(&remote_project, &mut local_project, true)?;
-            log::info!(
-                "{header}{cloned:>12}{header:#} `{}` {}",
-                info.name,
-                info.version
-            );
+            log::info!("{header}{cloned:>12}{header:#} `{}` {}", info.name, info.version);
+            Ok((locator, std_resolver))
         }
+    };
+
+    let (locator, _std_resolver) = match fetch_result {
+        Ok(r) => r,
+        Err(e) => {
+            clean_dir(&target);
+            return Err(e);
+        }
+    };
+
+    // Resolve and install deps via facade
+    if !no_deps {
+        let net = NetworkContext::with_client(config.clone(), auth_policy, client, runtime);
+        let provided_iris = if !include_std {
+            sysand_core::stdlib::known_std_libs()
+        } else {
+            HashMap::default()
+        };
+
+        let identifiers = match locator {
+            ProjectLocator::Iri(iri) => Some(vec![iri]),
+            _ => None,
+        };
+
+        sysand_core::facade::clone::clone_with_deps(
+            &project_path,
+            identifiers,
+            &net,
+            &provided_iris,
+        )?;
     }
 
-    Ok((include_std, locator, local_project, std_resolver))
+    Ok(())
 }
 
-/// Obtains a project identified by `iri` via `resolver`. If
-/// version is given, obtains exactly that version. If not,
-/// obtains the latest version (including prerelease versions)
+/// Obtains a project identified by `iri` via `resolver`.
 pub fn get_project_version<R: ResolveRead>(
     iri: &Iri<String>,
     version: Option<String>,
@@ -297,14 +210,9 @@ pub fn get_project_version<R: ResolveRead>(
 ) -> Result<(semver::Version, R::ProjectStorage), anyhow::Error> {
     match resolver.resolve_read(iri)? {
         ResolutionOutcome::Resolved(alternatives) => {
-            // If no version is supplied, choose the highest
-            // Else, choose version that is supplied
-            // TODO: maybe add `no_semver` param to control whether version is
-            //       interpreted as semver?
             let requested_version = version
                 .as_ref()
                 .map(|v| {
-                    // TODO: since we require this anyway, might as well take Option<Iri<String>>
                     semver::Version::parse(v)
                         .map_err(|e| anyhow!("failed to parse given version {v} as SemVer: {e}"))
                 })
@@ -314,9 +222,6 @@ pub fn get_project_version<R: ResolveRead>(
                 let candidate_project = match alt {
                     Ok(cp) => cp,
                     Err(e) => {
-                        // These errors may be ugly, as `candidates` includes all
-                        // possible candidates, with expectation that only some
-                        // of them will work. So we don't show these by default
                         log::debug!("skipping candidate project: {e}");
                         continue;
                     }
@@ -358,10 +263,7 @@ pub fn get_project_version<R: ResolveRead>(
                     Some(v) => bail!(CliError::MissingProjectVersion(iri.as_ref().to_string(), v)),
                     None => bail!(CliError::MissingProject(iri.as_ref().to_string())),
                 },
-                1 => {
-                    // Can't move out values with match
-                    Ok(candidates.pop().unwrap())
-                }
+                1 => Ok(candidates.pop().unwrap()),
                 _ => {
                     let max_v = candidates
                         .into_iter()
@@ -382,14 +284,11 @@ pub fn get_project_version<R: ResolveRead>(
     }
 }
 
-/// Removes all files in the directory.
-/// All errors are ignored.
 fn clean_dir<P: AsRef<Utf8Path>>(path: P) {
     let Ok(entries) = fs::read_dir(path.as_ref()) else {
         return;
     };
     log::debug!("clearing contents of dir `{}`", path.as_ref());
-
     for entry in entries {
         let Ok(entry) = entry else { continue };
         let path = entry.path();
