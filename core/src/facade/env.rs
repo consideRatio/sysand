@@ -143,6 +143,100 @@ where
     .map_err(|e| SysandError::new(crate::error::ErrorCode::EnvConflict, e.to_string()))
 }
 
+/// Install a project from a local path into the environment.
+///
+/// If `no_deps` is false, resolves and installs dependencies too.
+#[cfg(all(feature = "filesystem", feature = "networking"))]
+pub fn install_from_path<Policy: crate::auth::HTTPAuthentication>(
+    iri: &str,
+    path: &camino::Utf8Path,
+    version_check: Option<&str>,
+    project_root: &camino::Utf8Path,
+    env: &mut crate::env::local_directory::LocalDirectoryEnvironment,
+    net: &crate::types::network::NetworkContext<Policy>,
+    index_urls: Option<Vec<url::Url>>,
+    provided_iris: &std::collections::HashMap<String, Vec<crate::project::memory::InMemoryProject>>,
+    no_deps: bool,
+    allow_overwrite: bool,
+    allow_multiple: bool,
+) -> Result<(), SysandError> {
+    use crate::project::ProjectRead;
+    use crate::project::utils::wrapfs;
+    use crate::resolve::file::FileResolverProject;
+
+    let metadata = wrapfs::metadata(path).map_err(SysandError::from)?;
+    let project: FileResolverProject = if metadata.is_dir() {
+        FileResolverProject::LocalSrcProject(crate::project::local_src::LocalSrcProject {
+            nominal_path: None,
+            project_path: path.to_string().into(),
+        })
+    } else {
+        FileResolverProject::LocalKParProject(
+            crate::project::local_kpar::LocalKParProject::new_guess_root(path)
+                .map_err(SysandError::from)?,
+        )
+    };
+
+    // Version check
+    if let Some(vr_str) = version_check {
+        let project_version = project
+            .get_info()
+            .map_err(|e| SysandError::new(crate::error::ErrorCode::Internal, e.to_string()))?
+            .and_then(|info| semver::Version::parse(&info.version).ok());
+        if let Some(pv) = project_version {
+            let vr = semver::VersionReq::parse(vr_str)
+                .map_err(|e| SysandError::new(crate::error::ErrorCode::VersionInvalid, e.to_string()))?;
+            if !vr.matches(&pv) {
+                return Err(SysandError::new(
+                    crate::error::ErrorCode::VersionInvalid,
+                    format!("project at `{path}` has version `{pv}` which does not match `{vr}`"),
+                ));
+            }
+        }
+    }
+
+    if no_deps {
+        crate::commands::env::do_env_install_project(
+            iri,
+            &project,
+            env,
+            allow_overwrite,
+            allow_multiple,
+        )
+        .map_err(|e| SysandError::new(crate::error::ErrorCode::EnvConflict, e.to_string()))
+    } else {
+        use std::str::FromStr;
+        use crate::commands::lock::do_lock_projects;
+        use crate::project::editable::EditableProject;
+
+        let resolver = crate::facade::resolver::build_resolver(
+            project_root,
+            net,
+            index_urls,
+            provided_iris.clone(),
+        )?;
+
+        let iri_parsed = fluent_uri::Iri::from_str(iri)
+            .map_err(|e| SysandError::new(crate::error::ErrorCode::IriInvalid, e.to_string()))?;
+        let project_with_editable = EditableProject::new(
+            path.as_str().into(),
+            project,
+        );
+
+        let internal_ctx = crate::context::ProjectContext::default();
+
+        let outcome = do_lock_projects(
+            [(Some(vec![iri_parsed]), &project_with_editable)],
+            resolver,
+            provided_iris,
+            &internal_ctx,
+        )
+        .map_err(|e| SysandError::new(crate::error::ErrorCode::ResolutionFailed, e.to_string()))?;
+
+        sync(&outcome.lock, project_root, env, net, provided_iris)
+    }
+}
+
 /// Uninstall a project from the environment.
 pub fn uninstall<E: WriteEnvironment>(
     env: E,

@@ -98,85 +98,27 @@ pub fn command_env_install_path<Policy: HTTPAuthentication>(
         HashMap::default()
     };
 
-    // For path-based install, open the project directly
-    use sysand_core::project::ProjectRead;
-    use sysand_core::resolve::file::FileResolverProject;
+    let index_urls = sysand_core::facade::resolver::resolve_index_urls(
+        &net.config,
+        resolution_opts.index,
+        resolution_opts.default_index,
+        &resolution_opts.index_mode,
+        DEFAULT_INDEX_URL,
+    )?;
 
-    let metadata = wrapfs::metadata(&path)?;
-    let project: FileResolverProject = if metadata.is_dir() {
-        FileResolverProject::LocalSrcProject(sysand_core::project::local_src::LocalSrcProject {
-            nominal_path: None,
-            project_path: path.as_str().into(),
-        })
-    } else {
-        FileResolverProject::LocalKParProject(
-            sysand_core::project::local_kpar::LocalKParProject::new_guess_root(&path)?,
-        )
-    };
-
-    if let Some(version) = version {
-        let project_version = project
-            .get_info()?
-            .and_then(|info| semver::Version::parse(&info.version).ok());
-        if let Some(pv) = project_version {
-            let vr = semver::VersionReq::parse(&version)?;
-            if !vr.matches(&pv) {
-                anyhow::bail!(
-                    "project at `{path}` has version `{pv}` which does not match `{vr}`"
-                );
-            }
-        }
-    }
-
-    if no_deps {
-        sysand_core::commands::env::do_env_install_project(
-            &iri,
-            &project,
-            &mut env,
-            install_opts.allow_overwrite,
-            install_opts.allow_multiple,
-        )?;
-    } else {
-        // Lock + sync with deps
-        let index_urls = sysand_core::facade::resolver::resolve_index_urls(
-            &net.config,
-            resolution_opts.index,
-            resolution_opts.default_index,
-            &resolution_opts.index_mode,
-            DEFAULT_INDEX_URL,
-        )?;
-
-        let resolver = sysand_core::facade::resolver::build_resolver(
-            &project_root,
-            net,
-            index_urls,
-            provided_iris.clone(),
-        )?;
-
-        use std::str::FromStr;
-        use sysand_core::commands::lock::do_lock_projects;
-
-        let iri_parsed = fluent_uri::Iri::from_str(iri.as_ref())?;
-        let project_with_editable = sysand_core::project::editable::EditableProject::new(
-            path.as_str().into(),
-            project,
-        );
-
-        let outcome = do_lock_projects(
-            [(Some(vec![iri_parsed]), &project_with_editable)],
-            resolver,
-            &provided_iris,
-            &sysand_core::context::ProjectContext::default(),
-        )?;
-
-        sysand_core::facade::env::sync(
-            &outcome.lock,
-            &project_root,
-            &mut env,
-            net,
-            &provided_iris,
-        )?;
-    }
+    sysand_core::facade::env::install_from_path(
+        iri.as_ref(),
+        &path,
+        version.as_deref(),
+        &project_root,
+        &mut env,
+        net,
+        index_urls,
+        &provided_iris,
+        no_deps,
+        install_opts.allow_overwrite,
+        install_opts.allow_multiple,
+    )?;
 
     Ok(())
 }
