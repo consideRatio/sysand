@@ -181,10 +181,20 @@ boundary. It lists all modules that belong in `internal/` and explains
 that the physical move happens after consumers fully migrate to the
 facade.
 
-**Lesson:** The physical move is not worth doing until all consumers
-(CLI, Java, Python, JS) exclusively use the facade. Currently the CLI
-still imports from `sysand_core::commands::*`, `sysand_core::project::*`,
-etc. directly. The boundary is communicated via the doc file for now.
+**Lesson:** After migrating simple commands and moving resolver assembly
+to the facade, the CLI still has ~20 direct imports from core internals
+used by complex orchestration commands (env install, clone, add config
+source matching). The physical move requires:
+
+1. `facade::env::install_with_deps` — env install orchestration (~170 lines)
+2. `facade::clone::clone_with_deps` — clone orchestration (~180 lines)
+3. Move `Lock`, `Source` types to `types/` (public vocabulary)
+4. Move `default_kpar_file_name` to facade
+5. Expose old `ProjectContext` via facade for discovery
+6. Move `style` config to types or facade
+
+~500 lines of additional migration. The boundary is communicated via
+`internal.rs` doc file for now.
 
 ## Resolved Questions
 
