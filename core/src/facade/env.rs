@@ -3,11 +3,6 @@
 
 //! Environment management facade functions.
 
-// Note: A full `install` orchestration (resolve + lock + sync) is
-// complex and CLI-specific. The facade exposes `install_project` which
-// installs a single already-resolved project into the environment.
-// The CLI/binding layer handles resolver assembly and the lock+sync
-// orchestration using `lock::update` and `env::sync`.
 
 use crate::env::{ReadEnvironment, WriteEnvironment};
 use crate::error::SysandError;
@@ -159,4 +154,133 @@ where
 {
     crate::commands::env::do_env_uninstall(iri, version, env)
         .map_err(|e| e.into())
+}
+
+/// Install a project by IRI into the environment, resolving dependencies.
+///
+/// Full orchestration: resolve the IRI via the provided resolver, lock
+/// dependencies, then sync the environment. This is what
+/// `sysand env install <IRI>` does end-to-end.
+///
+/// If `no_deps` is true, installs only the specified project without
+/// resolving or installing dependencies.
+#[cfg(all(feature = "filesystem", feature = "networking"))]
+pub fn install<Policy: crate::auth::HTTPAuthentication>(
+    iri: &str,
+    version_req: Option<&str>,
+    project_root: &camino::Utf8Path,
+    env: &mut crate::env::local_directory::LocalDirectoryEnvironment,
+    net: &crate::types::network::NetworkContext<Policy>,
+    index_urls: Option<Vec<url::Url>>,
+    provided_iris: &std::collections::HashMap<String, Vec<crate::project::memory::InMemoryProject>>,
+    no_deps: bool,
+    allow_overwrite: bool,
+    allow_multiple: bool,
+) -> Result<(), SysandError> {
+    use std::str::FromStr;
+
+    let resolver = crate::facade::resolver::build_resolver(
+        project_root,
+        net,
+        index_urls,
+        provided_iris.clone(),
+    )?;
+
+    if no_deps {
+        // Resolve project and install directly
+        let (_version, storage) = resolve_project_version(iri, version_req, &resolver)?;
+        crate::commands::env::do_env_install_project(
+            iri,
+            &storage,
+            env,
+            allow_overwrite,
+            allow_multiple,
+        )
+        .map_err(|e| SysandError::new(crate::error::ErrorCode::EnvConflict, e.to_string()))
+    } else {
+        // Resolve, lock, and sync
+        let iri_parsed = fluent_uri::Iri::from_str(iri)
+            .map_err(|e| SysandError::new(crate::error::ErrorCode::IriInvalid, e.to_string()))?;
+        let version_constraint = version_req
+            .map(|v| semver::VersionReq::parse(v))
+            .transpose()
+            .map_err(|e| SysandError::new(crate::error::ErrorCode::VersionInvalid, e.to_string()))?;
+
+        let usages = vec![crate::model::InterchangeProjectUsage {
+            resource: iri_parsed,
+            version_constraint,
+        }];
+
+        let internal_ctx = crate::context::ProjectContext::default();
+
+        let outcome = crate::commands::lock::do_lock_extend(
+            crate::lock::Lock::default(),
+            usages,
+            resolver,
+            provided_iris,
+            &internal_ctx,
+        )
+        .map_err(|e| SysandError::new(crate::error::ErrorCode::ResolutionFailed, e.to_string()))?;
+
+        sync(&outcome.lock, project_root, env, net, provided_iris)
+    }
+}
+
+/// Resolve a project by IRI and optional version constraint.
+#[cfg(all(feature = "filesystem", feature = "networking"))]
+fn resolve_project_version<R>(
+    iri: &str,
+    version_req: Option<&str>,
+    resolver: &R,
+) -> Result<(Option<String>, <R as crate::resolve::ResolveRead>::ProjectStorage), SysandError>
+where
+    R: crate::resolve::ResolveRead + std::fmt::Debug,
+    R::ProjectStorage: crate::project::ProjectRead + std::fmt::Debug,
+{
+    use crate::resolve::ResolutionOutcome;
+    use crate::project::ProjectRead;
+
+    let iri_parsed = fluent_uri::Iri::parse(iri.to_string())
+        .map_err(|(e, _)| SysandError::new(crate::error::ErrorCode::IriInvalid, e.to_string()))?;
+
+    let candidates = match resolver.resolve_read(&iri_parsed)
+        .map_err(|e| SysandError::new(crate::error::ErrorCode::ResolutionFailed, e.to_string()))?
+    {
+        ResolutionOutcome::Resolved(storages) => storages,
+        ResolutionOutcome::UnsupportedIRIType(msg) => {
+            return Err(SysandError::new(crate::error::ErrorCode::IriInvalid, msg));
+        }
+        ResolutionOutcome::Unresolvable(msg) => {
+            return Err(SysandError::new(crate::error::ErrorCode::ProjectNotInIndex, msg));
+        }
+    };
+
+    let version_req = version_req
+        .map(|v| semver::VersionReq::parse(v))
+        .transpose()
+        .map_err(|e| SysandError::new(crate::error::ErrorCode::VersionInvalid, e.to_string()))?;
+
+    for candidate in candidates {
+        let storage = candidate
+            .map_err(|e| SysandError::new(crate::error::ErrorCode::ResolutionFailed, e.to_string()))?;
+        let version = storage.version()
+            .map_err(|e| SysandError::new(crate::error::ErrorCode::Internal, e.to_string()))?;
+
+        if let Some(ref vr) = version_req {
+            if let Some(ref v) = version {
+                if let Ok(parsed) = semver::Version::parse(v) {
+                    if vr.matches(&parsed) {
+                        return Ok((version, storage));
+                    }
+                }
+            }
+        } else {
+            return Ok((version, storage));
+        }
+    }
+
+    Err(SysandError::new(
+        crate::error::ErrorCode::VersionNotInIndex,
+        format!("no matching version found for `{iri}`"),
+    ))
 }

@@ -301,12 +301,8 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                         path,
                         install_opts,
                         resolution_opts,
-                        &net.config,
+                        &net,
                         project_root,
-                        net.client.clone(),
-                        net.runtime.clone(),
-                        net.auth.clone(),
-                        ctx,
                     )
                 } else {
                     command_env_install(
@@ -314,12 +310,8 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                         version,
                         install_opts,
                         resolution_opts,
-                        &net.config,
+                        &net,
                         project_root,
-                        net.client.clone(),
-                        net.runtime.clone(),
-                        net.auth.clone(),
-                        ctx,
                     )
                 }
             }

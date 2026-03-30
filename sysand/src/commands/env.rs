@@ -1,103 +1,45 @@
 // SPDX-FileCopyrightText: © 2025 Sysand contributors <opensource@sensmetry.com>
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::collections::HashMap;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::Result;
 
 use camino::{Utf8Path, Utf8PathBuf};
-use fluent_uri::Iri;
 
 use sysand_core::{
     auth::HTTPAuthentication,
-    commands::{env::do_env_local_dir, lock::LockOutcome},
-    config::Config,
-    context::ProjectContext,
+    commands::env::do_env_local_dir,
     env::local_directory::LocalDirectoryEnvironment,
-    lock::Lock,
-    model::InterchangeProjectUsage,
-    project::{
-        ProjectRead, editable::EditableProject, local_kpar::LocalKParProject,
-        local_src::LocalSrcProject, utils::wrapfs,
-    },
-    resolve::{
-        file::FileResolverProject,
-        memory::{AcceptAll, MemoryResolver},
-        priority::PriorityResolver,
-        standard::standard_resolver,
-    },
+    project::utils::wrapfs,
+    stdlib::known_std_libs,
+    types::network::NetworkContext,
 };
 
 use crate::{
     DEFAULT_INDEX_URL,
     cli::{InstallOptions, ResolutionOptions},
-    commands::sync::command_sync,
 };
-
-// Inlined from facade::resolver since env install does its own resolver assembly
-fn get_overrides<P: AsRef<Utf8Path>, Policy: HTTPAuthentication>(
-    config: &Config,
-    project_root: P,
-    client: &reqwest_middleware::ClientWithMiddleware,
-    runtime: Arc<tokio::runtime::Runtime>,
-    auth_policy: Arc<Policy>,
-) -> Result<Vec<(Iri<String>, Vec<sysand_core::project::any::OverrideProject<Policy>>)>> {
-    use sysand_core::project::{any::AnyProject, reference::ProjectReference};
-    let mut overrides = Vec::new();
-    for config_project in &config.projects {
-        for identifier in &config_project.identifiers {
-            let mut projects = Vec::new();
-            for source in &config_project.sources {
-                projects.push(ProjectReference::new(AnyProject::try_from_source(
-                    source.clone(),
-                    &project_root,
-                    auth_policy.clone(),
-                    client.clone(),
-                    runtime.clone(),
-                )?));
-            }
-            overrides.push((Iri::parse(identifier.as_str())?.into(), projects));
-        }
-    }
-    Ok(overrides)
-}
 
 pub fn command_env<P: AsRef<Utf8Path>>(path: P) -> Result<LocalDirectoryEnvironment> {
     Ok(do_env_local_dir(path)?)
 }
 
-// TODO: Factor out provided_iris logic
-#[allow(clippy::too_many_arguments)]
 pub fn command_env_install<Policy: HTTPAuthentication>(
-    iri: Iri<String>,
+    iri: fluent_uri::Iri<String>,
     version: Option<String>,
     install_opts: InstallOptions,
     resolution_opts: ResolutionOptions,
-    config: &Config,
+    net: &NetworkContext<Policy>,
     project_root: Option<Utf8PathBuf>,
-    client: reqwest_middleware::ClientWithMiddleware,
-    runtime: Arc<tokio::runtime::Runtime>,
-    auth_policy: Arc<Policy>,
-    ctx: ProjectContext,
 ) -> Result<()> {
     let project_root = project_root.unwrap_or(wrapfs::current_dir()?);
     let mut env = crate::get_or_create_env(project_root.as_path())?;
-    let InstallOptions {
-        allow_overwrite,
-        allow_multiple,
-        deps,
-    } = install_opts;
-    let no_deps = deps == "none";
-    let ResolutionOptions {
-        index,
-        default_index,
-        index_mode,
-        include_std,
-    } = resolution_opts;
 
-    // TODO: should probably first check that current project exists
-    let provided_iris = if !include_std {
-        let sysml_std = crate::known_std_libs();
+    let no_deps = install_opts.deps == "none";
+
+    let provided_iris = if !resolution_opts.include_std {
+        let sysml_std = known_std_libs();
         if sysml_std.contains_key(iri.as_ref()) {
             crate::logger::warn_std(iri.as_ref());
             return Ok(());
@@ -107,145 +49,48 @@ pub fn command_env_install<Policy: HTTPAuthentication>(
         HashMap::default()
     };
 
-    let index_urls = if index_mode == "none" {
-        None
-    } else {
-        Some(config.index_urls(index, vec![DEFAULT_INDEX_URL.to_string()], default_index)?)
-    };
-
-    let overrides = get_overrides(
-        config,
-        &project_root,
-        &client,
-        runtime.clone(),
-        auth_policy.clone(),
+    let index_urls = sysand_core::facade::resolver::resolve_index_urls(
+        &net.config,
+        resolution_opts.index,
+        resolution_opts.default_index,
+        &resolution_opts.index_mode,
+        DEFAULT_INDEX_URL,
     )?;
 
-    let mut memory_projects = HashMap::default();
-    for (k, v) in &provided_iris {
-        memory_projects.insert(fluent_uri::Iri::parse(k.clone()).unwrap(), v.to_vec());
-    }
-    let override_resolver = PriorityResolver::new(
-        MemoryResolver::from(overrides),
-        MemoryResolver {
-            iri_predicate: AcceptAll {},
-            projects: memory_projects,
-        },
-    );
-    // TODO: Move out the runtime
-    let resolver = PriorityResolver::new(
-        override_resolver,
-        standard_resolver(
-            None,
-            None,
-            Some(client.clone()),
-            index_urls,
-            runtime.clone(),
-            auth_policy.clone(),
-        ),
-    );
-
-    // TODO: don't use different root project resolution
-    //       mechanisms depending on no_deps
-    if no_deps {
-        let (_version, storage) =
-            crate::commands::clone::get_project_version(&iri, version, &resolver)?;
-        sysand_core::commands::env::do_env_install_project(
-            &iri,
-            &storage,
-            &mut env,
-            allow_overwrite,
-            allow_multiple,
-        )?;
-    } else {
-        let usages = vec![InterchangeProjectUsage {
-            resource: fluent_uri::Iri::from_str(iri.as_ref())?,
-            version_constraint: version.map(|v| semver::VersionReq::parse(&v)).transpose()?,
-        }];
-
-        let LockOutcome {
-            lock,
-            dependencies: _dependencies,
-        } = sysand_core::commands::lock::do_lock_extend(
-            Lock::default(),
-            usages,
-            resolver,
-            &provided_iris,
-            &ctx,
-        )?;
-        // Find if we added any std lib dependencies. This relies on `Lock::default()`
-        // and `do_lock_extend()` to not read the existing lockfile, i.e. `lock` contains
-        // only `iri` and `iri`'s dependencies.
-        if !provided_iris.is_empty()
-            && lock
-                .projects
-                .iter()
-                .any(|x| x.identifiers.iter().any(|y| provided_iris.contains_key(y)))
-        {
-            crate::logger::warn_std_deps();
-        }
-        {{
-            let net_tmp = sysand_core::types::network::NetworkContext::with_client(
-                config.clone(),
-                auth_policy,
-                client,
-                runtime,
-            );
-            command_sync(&lock, project_root, &mut env, &net_tmp, &provided_iris)
-        }}?;
-    }
+    sysand_core::facade::env::install(
+        iri.as_ref(),
+        version.as_deref(),
+        &project_root,
+        &mut env,
+        net,
+        index_urls,
+        &provided_iris,
+        no_deps,
+        install_opts.allow_overwrite,
+        install_opts.allow_multiple,
+    )?;
 
     Ok(())
 }
 
-// TODO: Collect common arguments
-#[allow(clippy::too_many_arguments)]
 pub fn command_env_install_path<Policy: HTTPAuthentication>(
-    iri: Iri<String>,
+    iri: fluent_uri::Iri<String>,
     version: Option<String>,
     path: Utf8PathBuf,
     install_opts: InstallOptions,
     resolution_opts: ResolutionOptions,
-    config: &Config,
+    net: &NetworkContext<Policy>,
     project_root: Option<Utf8PathBuf>,
-    client: reqwest_middleware::ClientWithMiddleware,
-    runtime: Arc<tokio::runtime::Runtime>,
-    auth_policy: Arc<Policy>,
-    ctx: ProjectContext,
 ) -> Result<()> {
     let project_root = project_root.unwrap_or(wrapfs::current_dir()?);
     let mut env = crate::get_or_create_env(project_root.as_path())?;
-    let InstallOptions {
-        allow_overwrite,
-        allow_multiple,
-        deps,
-    } = install_opts;
-    let no_deps = deps == "none";
-    let ResolutionOptions {
-        index,
-        default_index,
-        index_mode,
-        include_std,
-    } = resolution_opts;
 
-    let metadata = wrapfs::metadata(&path)?;
-    let project = if metadata.is_dir() {
-        FileResolverProject::LocalSrcProject(LocalSrcProject {
-            nominal_path: None,
-            project_path: path.as_str().into(),
-        })
-    } else if metadata.is_file() {
-        FileResolverProject::LocalKParProject(LocalKParProject::new_guess_root_nominal(
-            &path, &path,
-        )?)
-    } else {
-        bail!("path `{path}` is neither a directory nor a file");
-    };
+    let no_deps = install_opts.deps == "none";
 
-    let provided_iris = if !include_std {
-        let sysml_std = crate::known_std_libs();
+    let provided_iris = if !resolution_opts.include_std {
+        let sysml_std = known_std_libs();
         if sysml_std.contains_key(iri.as_ref()) {
-            crate::logger::warn_std(&iri);
+            crate::logger::warn_std(iri.as_ref());
             return Ok(());
         }
         sysml_std
@@ -253,83 +98,84 @@ pub fn command_env_install_path<Policy: HTTPAuthentication>(
         HashMap::default()
     };
 
-    let index_urls = if index_mode == "none" {
-        None
+    // For path-based install, open the project directly
+    use sysand_core::project::ProjectRead;
+    use sysand_core::resolve::file::FileResolverProject;
+
+    let metadata = wrapfs::metadata(&path)?;
+    let project: FileResolverProject = if metadata.is_dir() {
+        FileResolverProject::LocalSrcProject(sysand_core::project::local_src::LocalSrcProject {
+            nominal_path: None,
+            project_path: path.as_str().into(),
+        })
     } else {
-        Some(config.index_urls(index, vec![DEFAULT_INDEX_URL.to_string()], default_index)?)
+        FileResolverProject::LocalKParProject(
+            sysand_core::project::local_kpar::LocalKParProject::new_guess_root(&path)?,
+        )
     };
 
     if let Some(version) = version {
         let project_version = project
             .get_info()?
-            .ok_or_else(|| anyhow!("missing project info"))?
-            .version;
-        if version != project_version {
-            bail!("given version {version} does not match project version {project_version}")
+            .and_then(|info| semver::Version::parse(&info.version).ok());
+        if let Some(pv) = project_version {
+            let vr = semver::VersionReq::parse(&version)?;
+            if !vr.matches(&pv) {
+                anyhow::bail!(
+                    "project at `{path}` has version `{pv}` which does not match `{vr}`"
+                );
+            }
         }
     }
 
-    // TODO: Fix this hack. Currently installing manually then turning project into Editable to
-    // avoid errors when syncing. Lockfile generation should be configurable.
-    sysand_core::commands::env::do_env_install_project(
-        iri.as_str(),
-        &project,
-        &mut env,
-        allow_overwrite,
-        allow_multiple,
-    )?;
-    if !no_deps {
-        let project = EditableProject::new(Utf8PathBuf::new(), project);
-
-        let overrides = get_overrides(
-            config,
-            &project_root,
-            &client,
-            runtime.clone(),
-            auth_policy.clone(),
+    if no_deps {
+        sysand_core::commands::env::do_env_install_project(
+            &iri,
+            &project,
+            &mut env,
+            install_opts.allow_overwrite,
+            install_opts.allow_multiple,
+        )?;
+    } else {
+        // Lock + sync with deps
+        let index_urls = sysand_core::facade::resolver::resolve_index_urls(
+            &net.config,
+            resolution_opts.index,
+            resolution_opts.default_index,
+            &resolution_opts.index_mode,
+            DEFAULT_INDEX_URL,
         )?;
 
-        let mut memory_projects = HashMap::default();
-        for (k, v) in provided_iris.iter() {
-            memory_projects.insert(fluent_uri::Iri::parse(k.clone()).unwrap(), v.to_vec());
-        }
-        let override_resolver = PriorityResolver::new(
-            MemoryResolver::from(overrides),
-            MemoryResolver {
-                iri_predicate: AcceptAll {},
-                projects: memory_projects,
-            },
+        let resolver = sysand_core::facade::resolver::build_resolver(
+            &project_root,
+            net,
+            index_urls,
+            provided_iris.clone(),
+        )?;
+
+        use std::str::FromStr;
+        use sysand_core::commands::lock::do_lock_projects;
+
+        let iri_parsed = fluent_uri::Iri::from_str(iri.as_ref())?;
+        let project_with_editable = sysand_core::project::editable::EditableProject::new(
+            path.as_str().into(),
+            project,
         );
-        // TODO: Move out the runtime
-        let resolver = PriorityResolver::new(
-            override_resolver,
-            standard_resolver(
-                Some(path),
-                None,
-                Some(client.clone()),
-                index_urls,
-                runtime.clone(),
-                auth_policy.clone(),
-            ),
-        );
-        let LockOutcome {
-            lock,
-            dependencies: _dependencies,
-        } = sysand_core::commands::lock::do_lock_projects(
-            [(Some(vec![iri]), &project)],
+
+        let outcome = do_lock_projects(
+            [(Some(vec![iri_parsed]), &project_with_editable)],
             resolver,
             &provided_iris,
-            &ctx,
+            &sysand_core::context::ProjectContext::default(),
         )?;
-        {{
-            let net_tmp = sysand_core::types::network::NetworkContext::with_client(
-                config.clone(),
-                auth_policy,
-                client,
-                runtime,
-            );
-            command_sync(&lock, project_root, &mut env, &net_tmp, &provided_iris)
-        }}?;
+
+        sysand_core::facade::env::sync(
+            &outcome.lock,
+            &project_root,
+            &mut env,
+            net,
+            &provided_iris,
+        )?;
     }
 
     Ok(())
@@ -340,17 +186,24 @@ pub fn command_env_uninstall<S: AsRef<str>, Q: AsRef<str>>(
     version: Option<Q>,
     env: LocalDirectoryEnvironment,
 ) -> Result<()> {
-    sysand_core::commands::env::do_env_uninstall(iri, version, env)?;
+    sysand_core::facade::env::uninstall(env, iri.as_ref(), version.as_ref().map(|s| s.as_ref()))?;
     Ok(())
 }
 
 pub fn command_env_list(env: Option<LocalDirectoryEnvironment>) -> Result<()> {
-    let Some(env) = env else {
-        bail!("unable to identify environment to list");
-    };
-
-    for (uri, version) in sysand_core::commands::env::do_env_list(env)? {
-        println!("`{uri}` {}", version.unwrap_or("".to_string()));
+    match env {
+        Some(env) => {
+            let entries = sysand_core::facade::env::list(env)?;
+            for entry in entries {
+                match entry.version {
+                    Some(v) => println!("{} {}", entry.iri, v),
+                    None => println!("{}", entry.iri),
+                }
+            }
+        }
+        None => {
+            log::warn!("no environment found");
+        }
     }
     Ok(())
 }

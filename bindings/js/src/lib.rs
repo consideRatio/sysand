@@ -212,7 +212,9 @@ pub fn usage_remove(
     iri: &str,
 ) -> Result<(), JsValue> {
     let mut project = open_browser_project(prefix, root_path)?;
-    sysand_core::facade::usage::remove(&mut project, iri).map_err(sysand_err)
+    sysand_core::facade::usage::remove(&mut project, iri)
+        .map(|_| ())
+        .map_err(sysand_err)
 }
 
 // ---------------------------------------------------------------------------
