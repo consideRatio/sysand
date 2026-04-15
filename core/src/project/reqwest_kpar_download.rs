@@ -9,6 +9,7 @@ use std::{
 };
 
 use futures::AsyncRead;
+use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
 use crate::{
@@ -39,6 +40,17 @@ pub struct ReqwestKparDownloadedProject<Policy> {
     pub client: reqwest_middleware::ClientWithMiddleware,
     pub inner: LocalKParProject,
     pub auth_policy: Arc<Policy>,
+    /// Serializes concurrent `ensure_downloaded*` calls on the same project.
+    /// Two tasks racing on an un-downloaded archive would both see
+    /// `archive_path.is_file() == false`, both open the same staging file
+    /// (which `wrapfs::File::create` truncates), interleave writes, and
+    /// potentially rename corrupt bytes into `archive_path` — each task's
+    /// hasher still matches its own stream but the file on disk reflects
+    /// whichever `rename` won last. The lock guarantees at most one download
+    /// is in flight per project and, combined with the double-checked
+    /// `is_file()` inside the critical section, makes subsequent waiters
+    /// observe the verified archive installed by the winner.
+    download_lock: tokio::sync::Mutex<()>,
 }
 
 // TODO: reduce size of errors here and elsewhere
@@ -61,6 +73,12 @@ pub enum ReqwestKparDownloadedError {
     KPar(#[from] LocalKParError),
     #[error(transparent)]
     Io(#[from] Box<FsIoError>),
+    #[error("kpar at `{url}` has sha256 `{computed}` but the expected digest was `{expected}`")]
+    DigestMismatch {
+        url: Box<str>,
+        expected: String,
+        computed: String,
+    },
 }
 
 impl From<FsIoError> for ReqwestKparDownloadedError {
@@ -69,27 +87,103 @@ impl From<FsIoError> for ReqwestKparDownloadedError {
     }
 }
 
+/// Sibling staging path used for atomic-rename downloads. Sits next to the
+/// final path inside the same tempdir so `rename` is a cheap same-filesystem
+/// operation.
+fn staging_path_for(final_path: &camino::Utf8Path) -> camino::Utf8PathBuf {
+    let file_name = final_path.file_name().unwrap_or("project.kpar");
+    let staging_name = format!("{file_name}.download");
+    match final_path.parent() {
+        Some(parent) => parent.join(staging_name),
+        None => camino::Utf8PathBuf::from(staging_name),
+    }
+}
+
 impl<Policy: HTTPAuthentication> ReqwestKparDownloadedProject<Policy> {
+    pub fn new(
+        url: reqwest::Url,
+        client: reqwest_middleware::ClientWithMiddleware,
+        auth_policy: Arc<Policy>,
+    ) -> Result<Self, ReqwestKparDownloadedError> {
+        Ok(Self {
+            url,
+            inner: LocalKParProject::new_temporary()?,
+            client,
+            auth_policy,
+            download_lock: tokio::sync::Mutex::new(()),
+        })
+    }
+
     pub fn new_guess_root<S: AsRef<str>>(
         url: S,
         client: reqwest_middleware::ClientWithMiddleware,
         auth_policy: Arc<Policy>,
     ) -> Result<Self, ReqwestKparDownloadedError> {
-        Ok(ReqwestKparDownloadedProject {
-            url: reqwest::Url::parse(url.as_ref())
+        Self::new(
+            reqwest::Url::parse(url.as_ref())
                 .map_err(|e| ReqwestKparDownloadedError::ParseUrl(url.as_ref().into(), e))?,
-            inner: LocalKParProject::new_temporary()?,
             client,
             auth_policy,
-        })
+        )
     }
 
+    /// True iff the archive has already been fully downloaded and (for
+    /// verified downloads) its sha256 matched the expected digest. See the
+    /// "verified sentinel" comment in [`Self::ensure_downloaded_inner`] —
+    /// the archive file only ever appears at its final path after a
+    /// successful rename, so a simple `is_file` check is sufficient.
+    pub fn is_downloaded(&self) -> bool {
+        self.inner.archive_path.is_file()
+    }
+
+    /// Ensure the archive is on disk without verifying its digest. Use
+    /// [`Self::ensure_downloaded_verified`] when the caller has a sha256 hex
+    /// digest to check against.
     pub async fn ensure_downloaded(&self) -> Result<(), ReqwestKparDownloadedError> {
+        self.ensure_downloaded_inner(None).await
+    }
+
+    /// Ensure the archive is on disk *and* its sha256 matched
+    /// `expected_sha256_hex`. The hex is compared lowercase; callers
+    /// obtain it from the pre-validated `Sha256HexDigest` produced during
+    /// `versions.json` ingest.
+    pub async fn ensure_downloaded_verified(
+        &self,
+        expected_sha256_hex: &str,
+    ) -> Result<(), ReqwestKparDownloadedError> {
+        self.ensure_downloaded_inner(Some(expected_sha256_hex))
+            .await
+    }
+
+    async fn ensure_downloaded_inner(
+        &self,
+        expected_digest: Option<&str>,
+    ) -> Result<(), ReqwestKparDownloadedError> {
+        // Fast path: archive already present and verified.
         if self.inner.archive_path.is_file() {
             return Ok(());
         }
 
-        let mut file = wrapfs::File::create(&self.inner.archive_path)?;
+        // Serialize concurrent downloaders for this project. Without this
+        // guard, two tasks seeing `is_file() == false` would both open the
+        // staging file and interleave writes into it.
+        let _guard = self.download_lock.lock().await;
+
+        // Double-check: a prior holder of the lock may have completed the
+        // download while we were waiting, in which case there's nothing to
+        // do and we avoid a redundant fetch.
+        if self.inner.archive_path.is_file() {
+            return Ok(());
+        }
+
+        // Download to a sibling staging path and atomic-rename on success.
+        // `archive_path.is_file()` is then the "verified" sentinel: a failed
+        // verification leaves only the staging file (best-effort cleaned up),
+        // never the final path, so a retry can never serve tampered bytes
+        // even if cleanup itself fails.
+        let final_path = &self.inner.archive_path;
+        let staging_path = staging_path_for(final_path);
+        let mut file = wrapfs::File::create(&staging_path)?;
 
         let resp = self
             .auth_policy
@@ -97,6 +191,7 @@ impl<Policy: HTTPAuthentication> ReqwestKparDownloadedProject<Policy> {
             .await?;
 
         if !resp.status().is_success() {
+            let _ = std::fs::remove_file(&staging_path);
             return Err(ReqwestKparDownloadedError::BadHttpStatus {
                 url: self.url.as_str().into(),
                 status: resp.status(),
@@ -106,14 +201,47 @@ impl<Policy: HTTPAuthentication> ReqwestKparDownloadedProject<Policy> {
 
         use futures::StreamExt as _;
 
+        let expected_digest = expected_digest.map(ToOwned::to_owned);
+        let mut hasher = expected_digest.as_ref().map(|_| Sha256::new());
+
         while let Some(bytes) = bytes_stream.next().await {
-            let bytes = bytes.map_err(ReqwestKparDownloadedError::Reqwest)?;
-            file.write_all(&bytes)
-                .map_err(|e| FsIoError::WriteFile(self.inner.archive_path.clone(), e))?;
+            let bytes = match bytes {
+                Ok(b) => b,
+                Err(e) => {
+                    let _ = std::fs::remove_file(&staging_path);
+                    return Err(ReqwestKparDownloadedError::Reqwest(e));
+                }
+            };
+            if let Some(h) = hasher.as_mut() {
+                h.update(&bytes);
+            }
+            if let Err(e) = file.write_all(&bytes) {
+                let _ = std::fs::remove_file(&staging_path);
+                return Err(FsIoError::WriteFile(staging_path.clone(), e).into());
+            }
         }
 
-        file.sync_all()
-            .map_err(|e| FsIoError::WriteFile(self.inner.archive_path.clone(), e))?;
+        // Verify before any sync_all/rename so a mismatched archive never
+        // gets durably installed at `final_path`.
+        if let (Some(h), Some(expected)) = (hasher, expected_digest.as_ref()) {
+            let computed = format!("{:x}", h.finalize());
+            if &computed != expected {
+                let _ = std::fs::remove_file(&staging_path);
+                return Err(ReqwestKparDownloadedError::DigestMismatch {
+                    url: self.url.as_str().into(),
+                    expected: expected.clone(),
+                    computed,
+                });
+            }
+        }
+
+        if let Err(e) = file.sync_all() {
+            let _ = std::fs::remove_file(&staging_path);
+            return Err(FsIoError::WriteFile(staging_path.clone(), e).into());
+        }
+        drop(file);
+
+        wrapfs::rename(&staging_path, final_path)?;
 
         Ok(())
     }
@@ -147,7 +275,6 @@ impl<Policy: HTTPAuthentication> ProjectReadAsync for ReqwestKparDownloadedProje
         Self::Error,
     > {
         self.ensure_downloaded().await?;
-
         Ok(self.inner.get_project()?)
     }
 

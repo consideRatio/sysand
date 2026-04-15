@@ -10,10 +10,8 @@ use typed_path::Utf8UnixPath;
 use crate::{
     context::ProjectContext,
     lock::Source,
-    model::{
-        InterchangeProjectInfoRaw, InterchangeProjectMetadataRaw, ProjectHash, project_hash_raw,
-    },
-    project::{ProjectRead, cached::CachedProject},
+    model::{InterchangeProjectInfoRaw, InterchangeProjectMetadataRaw},
+    project::{CanonicalizationError, ProjectRead, cached::CachedProject},
     resolve::{ResolutionOutcome, ResolveRead, null::NullResolver},
 };
 
@@ -115,7 +113,7 @@ pub struct CombinedIterator<
     RegistryResolver: ResolveRead,
 > {
     pub state: CombinedIteratorState<FileResolver, RemoteResolver, RegistryResolver>,
-    pub locals: IndexMap<ProjectHash, LocalResolver::ProjectStorage>,
+    pub locals: IndexMap<String, LocalResolver::ProjectStorage>,
 }
 
 impl<
@@ -152,13 +150,25 @@ impl<
                 .map(|v| Ok(CombinedProjectStorage::DanglingLocalProject(v.1))),
             CombinedIteratorState::ResolvedRemote(iter) => match iter.next() {
                 Some(r) => Some(r.map_err(CombinedResolverError::Remote).map(|project| {
-                    let cached = project
-                        .get_project()
-                        .ok()
-                        .and_then(|(spec, meta)| spec.zip(meta))
-                        .and_then(|(spec, meta)| {
-                            self.locals.shift_remove(&project_hash_raw(&spec, &meta))
-                        });
+                    let cached = match project.checksum_canonical_hex() {
+                        Ok(opt) => opt
+                            .and_then(|checksum| self.locals.shift_remove(&checksum)),
+                        Err(err) => {
+                            // A failure here is load-bearing: it may signal
+                            // remote/local digest drift (e.g.
+                            // `AdvertisedDigestDrift` from an indexed-remote
+                            // project) or a stale local cache. Falling through
+                            // to "no cache hit" silently would hide that from
+                            // the user. Log at `warn!` so at least the
+                            // diagnostic survives; downstream `get_project`
+                            // will surface the same error as a hard failure
+                            // when it's actually consulted.
+                            log::warn!(
+                                "remote-project checksum_canonical_hex failed; skipping local-cache match: {err}"
+                            );
+                            None
+                        }
+                    };
 
                     if let Some(local_project) = cached {
                         CombinedProjectStorage::CachedRemoteProject(CachedProject::new(
@@ -176,13 +186,16 @@ impl<
             },
             CombinedIteratorState::ResolvedRegistry(iter) => match iter.next() {
                 Some(r) => Some(r.map_err(CombinedResolverError::Registry).map(|project| {
-                    let cached = project
-                        .get_project()
-                        .ok()
-                        .and_then(|(spec, meta)| spec.zip(meta))
-                        .and_then(|(spec, meta)| {
-                            self.locals.shift_remove(&project_hash_raw(&spec, &meta))
-                        });
+                    let cached = match project.checksum_canonical_hex() {
+                        Ok(opt) => opt
+                            .and_then(|checksum| self.locals.shift_remove(&checksum)),
+                        Err(err) => {
+                            log::warn!(
+                                "registry-project checksum_canonical_hex failed; skipping local-cache match: {err}"
+                            );
+                            None
+                        }
+                    };
 
                     if let Some(local_project) = cached {
                         CombinedProjectStorage::CachedRegistryProject(CachedProject::new(
@@ -260,7 +273,7 @@ impl<
         }
 
         // Collect local cached projects
-        let mut locals: IndexMap<ProjectHash, LocalResolver::ProjectStorage> = IndexMap::new();
+        let mut locals: IndexMap<String, LocalResolver::ProjectStorage> = IndexMap::new();
 
         if let Some(local_resolver) = &self.local_resolver {
             match local_resolver
@@ -276,13 +289,13 @@ impl<
                                     "local resolver rejected project with IRI `{uri}`: {err}",
                                 );
                             }
-                            Ok(project) => match project.get_project() {
-                                Ok((Some(info), Some(meta))) => {
-                                    locals.insert(project_hash_raw(&info, &meta), project);
+                            Ok(project) => match project.checksum_canonical_hex() {
+                                Ok(Some(checksum)) => {
+                                    locals.insert(checksum, project);
                                 }
-                                Ok(_) => {
+                                Ok(None) => {
                                     log::debug!(
-                                        "local resolver rejected project with IRI `{uri}` due to missing project info/meta",
+                                        "local resolver rejected project with IRI `{uri}` due to missing canonical checksum",
                                     );
                                 }
                                 Err(err) => {

@@ -77,3 +77,85 @@ fn test_basic_download_request() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+/// Two concurrent `ensure_downloaded_verified` calls on the same
+/// project must fan in to a single download. Without the per-project
+/// download lock, both tasks see `archive_path.is_file() == false`, both
+/// open the staging file (which `wrapfs::File::create` truncates), and
+/// interleave writes — each task's hasher passes against its own
+/// stream but the file on disk is corrupt.
+///
+/// This test serializes through a real `reqwest`/`mockito` round-trip, so
+/// both futures race through the same code paths a real caller would hit.
+/// We assert:
+///   - both futures resolve `Ok(())`,
+///   - the server observed exactly one kpar fetch (`expect(1)`),
+///   - the archive on disk can be parsed and still exposes the expected
+///     project — i.e. the bytes weren't interleaved.
+#[test]
+fn test_concurrent_downloads_fan_in_to_single_fetch() -> Result<(), Box<dyn std::error::Error>> {
+    use sha2::{Digest as _, Sha256};
+
+    let kpar_bytes = {
+        let mut cursor = std::io::Cursor::new(vec![]);
+        let mut zip = zip::ZipWriter::new(&mut cursor);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored)
+            .unix_permissions(0o755);
+        zip.start_file("root/.project.json", options)?;
+        zip.write_all(br#"{"name":"concurrent","version":"1.0.0","usage":[]}"#)?;
+        zip.start_file("root/.meta.json", options)?;
+        zip.write_all(br#"{"index":{},"created":"x"}"#)?;
+        zip.finish().unwrap();
+        cursor.flush()?;
+        cursor.into_inner()
+    };
+    let expected_digest = format!("{:x}", Sha256::digest(&kpar_bytes));
+
+    let mut server = mockito::Server::new();
+    let url = reqwest::Url::parse(&server.url())?;
+
+    // `expect(1)` pins the invariant: exactly one request reaches the
+    // server, even under racing callers.
+    let get_kpar = server
+        .mock("GET", "/concurrent.kpar")
+        .with_status(200)
+        .with_header("content-type", "application/zip")
+        .with_body(&kpar_bytes)
+        .expect(1)
+        .create();
+
+    let project = Arc::new(super::ReqwestKparDownloadedProject::new_guess_root(
+        format!("{url}concurrent.kpar"),
+        create_reqwest_client()?,
+        Arc::new(Unauthenticated {}),
+    )?);
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+
+    // Two futures on the same runtime race through the pre-lock
+    // `is_file()` check together (both see `false`). Without the
+    // download lock, both would proceed into the write path; with it,
+    // only one performs the download and the other observes
+    // `is_file() == true` under the guard.
+    runtime.block_on(async {
+        let f1 = project.ensure_downloaded_verified(&expected_digest);
+        let f2 = project.ensure_downloaded_verified(&expected_digest);
+        let (r1, r2) = futures::future::join(f1, f2).await;
+        r1.expect("ensure_downloaded #1");
+        r2.expect("ensure_downloaded #2");
+    });
+
+    get_kpar.assert();
+
+    // The installed archive must parse — a corrupted interleaved write
+    // would fail here or return garbage.
+    let (Some(info), Some(_meta)) = project.inner.get_project()? else {
+        panic!("installed archive failed to expose project");
+    };
+    assert_eq!(info.name, "concurrent");
+
+    Ok(())
+}
