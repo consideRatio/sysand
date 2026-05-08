@@ -15,11 +15,10 @@ Sysand project index. The guide describes three ways to run the index:
 > (such as [beta.sysand.org][sysand_index]) is not a part of this guide.
 
 > [!warning]
-> Sysand is in active development. The structure of indexes and
-> `sysand_env` folders **can and will change** with future updates of Sysand. As
-> long as Sysand is on version 0.x.y, we cannot guarantee backwards
-> compatibility between different Sysand versions and indexes created using
-> different Sysand versions.
+> Sysand is in active development. The structure of indexes **can and will
+> change** with future updates of Sysand. As long as Sysand is on version 0.x.y,
+> we cannot guarantee backwards compatibility between different Sysand versions
+> and indexes created using different Sysand versions.
 
 ## Local Machine
 
@@ -29,63 +28,54 @@ production hosting as well. Get in touch with your IT administrator to get this
 running on your company's infrastructure.
 
 The easiest way to host a project index from which to install packages is to
-expose a `sysand_env` over HTTP, since indexes and `sysand_env` share the same
-structure that is understood by Sysand.
+create a local static index tree and expose it over HTTP.
 
-### Create `sysand_env`
+### Create an index
 
-First, use the Sysand CLI to create a Sysand environment:
+First, use the Sysand CLI to create an empty index:
 
 ```sh
-sysand env
+sysand index init
 ```
 
-This will create a `sysand_env/` folder in your current directory.
+This will create an `index.json` file in your current directory.
 
-### Add Packages to the Environment
+### Add Packages to the Index
 
-You can now install the packages you want to share into the Sysand environment.
+You can now add the packages you want to share into the Sysand index.
 For example, if you have a `MyProject.kpar` file in your current directory,
 you can add it to the package index by:
 
 ```sh
-sysand env install urn:kpar:my_project --path MyProject.kpar
+sysand index add MyProject.kpar --iri urn:kpar:my_project
 ```
 
 This command will create an entry in the package index with the IRI of
 `urn:kpar:my_project` that other people can then use to install your package.
-With the `--path` argument, you point
-to the `.kpar` file that you want to host on the package index.
+When `--iri` is omitted, `sysand index add` infers a `pkg:sysand` IRI from the
+KPAR project's publisher and name.
 
 > [!tip]
 > Any IRI can be freely chosen here, just don't choose an IRI that could
 > point to another resource, like the ones starting with `http(s)`, `file` or
 > `ssh`.
 
-By default, this command also installs all usages (dependencies) of
-`my_project`. You can use the `--no-deps` CLI flag to only install the package
-without dependencies.
-
-If you want to host multiple versions of the same package in your repository,
-you also need to use the `--allow-multiple` CLI flag in the `sysand env install`
-command.
-
 Repeat this step for as many times as you have packages (and their versions),
 giving a unique IRI for each different package.
 
 ### Start an HTTP server
 
-Once you install all the required packages, you can use Python and its
+Once you add all the required packages, you can use Python and its
 [built-in `http.server` module](https://docs.python.org/3/library/http.server.html)
 to quickly start a simple HTTP server that will make the package index accessible
 over the network. To do this, run:
 
 ```sh
-python3 -m http.server -d sysand_env 8080
+python3 -m http.server -d . 8080
 ```
 
 This command executes the `http.server` module on port `8080`, and tells the
-module to expose the contents of the `sysand_env` folder to the network.
+module to expose the contents of the current directory to the network.
 
 > [!important]
 > Python's built-in `http.server` module is **not** intended for production use.

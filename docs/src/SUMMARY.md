@@ -16,6 +16,7 @@
   - [sysand build](commands/build.md)
   - [sysand publish](commands/publish.md)
   - [sysand lock](commands/lock.md)
+  - [sysand index](commands/index.md)
   - [sysand env](commands/env.md)
     - [sysand env install](commands/env/install.md)
     - [sysand env uninstall](commands/env/uninstall.md)

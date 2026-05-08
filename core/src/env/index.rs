@@ -537,7 +537,7 @@ impl<Policy: HTTPAuthentication> IndexEnvironmentAsync<Policy> {
 /// [`IndexEnvironmentError::VersionsOutOfOrder`]. pubgrub's internal
 /// sorting during solving does not mask the bug at the protocol
 /// boundary.
-fn validate_versions(
+pub(crate) fn validate_versions(
     url: &url::Url,
     vs: VersionsJson,
 ) -> Result<Rc<[AdvertisedVersion]>, IndexEnvironmentError> {

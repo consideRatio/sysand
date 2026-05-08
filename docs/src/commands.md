@@ -9,6 +9,7 @@
 - [exclude](commands/exclude.md)
 - [build](commands/build.md)
 - [lock](commands/lock.md)
+- [index](commands/index.md)
 - [env](commands/env.md)
   - [install](commands/env/install.md)
   - [uninstall](commands/env/uninstall.md)

@@ -54,6 +54,7 @@ use crate::{
         },
         exclude::command_exclude,
         include::command_include,
+        index::{command_index_add, command_index_init, command_index_remove, command_index_yank},
         info::{command_info_current_project, command_info_path, command_info_verb_path},
         init::command_init,
         lock::command_lock,
@@ -361,6 +362,18 @@ pub fn run_cli(args: cli::Args) -> Result<()> {
                     &provided_iris,
                     include_std,
                 )
+            }
+        },
+        Command::Index { command } => match command {
+            cli::IndexCommand::Init => command_index_init(ctx.current_directory),
+            cli::IndexCommand::Add { kpar_path, iri } => {
+                command_index_add(ctx.current_directory, kpar_path, iri)
+            }
+            cli::IndexCommand::Yank { iri, version } => {
+                command_index_yank(ctx.current_directory, iri, version)
+            }
+            cli::IndexCommand::Remove { iri, version } => {
+                command_index_remove(ctx.current_directory, iri, version)
             }
         },
         Command::Lock { resolution_opts } => {
