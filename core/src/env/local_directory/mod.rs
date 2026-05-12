@@ -44,7 +44,7 @@ use utils::{TryMoveError, try_move_files};
 #[derive(Debug, Clone)]
 pub struct LocalDirectoryEnvironment {
     /// Path of the env, including `sysand_env` part. Must be canonical
-    root_dir: Utf8PathBuf,
+    env_dir: Utf8PathBuf,
     metadata: EnvMetadata,
 }
 
@@ -52,38 +52,38 @@ pub const METADATA_PATH: &str = "env.toml";
 pub const PROJECT_PATH_PREFIX: &str = "lib/";
 
 impl LocalDirectoryEnvironment {
-    /// `root_dir` can be any cwd-relative/absolute path
-    pub fn read<P: AsRef<Utf8Path>>(root_dir: P) -> Result<Self, EnvMetadataError> {
-        let root_dir = wrapfs::canonicalize(root_dir)?;
-        let metadata = load_env_metadata(root_dir.join(METADATA_PATH))?;
-        Ok(Self { root_dir, metadata })
+    /// `env_dir` can be any cwd-relative/absolute path
+    pub fn read<P: AsRef<Utf8Path>>(env_dir: P) -> Result<Self, EnvMetadataError> {
+        let env_dir = wrapfs::canonicalize(env_dir)?;
+        let metadata = load_env_metadata(env_dir.join(METADATA_PATH))?;
+        Ok(Self { env_dir, metadata })
     }
 
-    /// `root_dir` can be any cwd-relative/absolute path. `env.toml` must not exist
-    pub fn create<P: AsRef<Utf8Path>>(root_dir: P) -> Result<Self, Box<FsIoError>> {
-        let root_dir = wrapfs::canonicalize(root_dir)?;
+    /// `env_dir` can be any cwd-relative/absolute path. `env.toml` must not exist
+    pub fn create<P: AsRef<Utf8Path>>(env_dir: P) -> Result<Self, Box<FsIoError>> {
+        let env_dir = wrapfs::canonicalize(env_dir)?;
 
         let metadata = EnvMetadata::default();
-        let path = root_dir.join(METADATA_PATH);
+        let path = env_dir.join(METADATA_PATH);
         let mut file = wrapfs::File::create_new(&path)?;
         file.write_all(metadata.to_string().as_bytes())
             .map_err(|e| FsIoError::WriteFile(path, e))?;
 
-        Ok(Self { root_dir, metadata })
+        Ok(Self { env_dir, metadata })
     }
 
     /// Try reading the environment metadata. If it does not exist,
     /// returns `Ok(None)`.
-    /// `root_dir` can be any cwd-relative/absolute path
-    pub fn try_read<P: AsRef<Utf8Path>>(root_dir: P) -> Result<Option<Self>, EnvMetadataError> {
-        let root_dir = root_dir.as_ref();
-        let meta_path = root_dir.join(METADATA_PATH);
+    /// `env_dir` can be any cwd-relative/absolute path
+    pub fn try_read<P: AsRef<Utf8Path>>(env_dir: P) -> Result<Option<Self>, EnvMetadataError> {
+        let env_dir = env_dir.as_ref();
+        let meta_path = env_dir.join(METADATA_PATH);
         match fs::read_to_string(&meta_path) {
             Ok(s) => {
                 let metadata = parse_env_metadata(meta_path, s)?;
 
-                let root_dir = wrapfs::canonicalize(root_dir)?;
-                Ok(Some(Self { root_dir, metadata }))
+                let env_dir = wrapfs::canonicalize(env_dir)?;
+                Ok(Some(Self { env_dir, metadata }))
             }
             Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
             Err(e) => Err(EnvMetadataError::Io(
@@ -145,11 +145,11 @@ impl LocalDirectoryEnvironment {
     }
 
     pub fn root_path(&self) -> &Utf8Path {
-        &self.root_dir
+        &self.env_dir
     }
 
     pub fn metadata_path(&self) -> Utf8PathBuf {
-        self.root_dir.join(METADATA_PATH)
+        self.env_dir.join(METADATA_PATH)
     }
 
     pub fn write(&self) -> Result<(), Box<FsIoError>> {
@@ -165,7 +165,7 @@ impl LocalDirectoryEnvironment {
         if project.editable {
             self.parent_dir().join(project.path.as_str())
         } else {
-            self.root_dir.join(project.path.as_str())
+            self.env_dir.join(project.path.as_str())
         }
     }
 
@@ -201,20 +201,20 @@ impl LocalDirectoryEnvironment {
     /// the root of relative paths of `editable`/`workspace` projects
     // TODO: is it correct to assume that `sysand_env` is always at workspace/project root?
     fn parent_dir(&self) -> &Utf8Path {
-        // Will fail only if env is at root, i.e. `self.root_dir == /`
-        self.root_dir.parent().unwrap()
+        // Will fail only if env is at root, i.e. `self.env_dir == /`
+        self.env_dir.parent().unwrap()
     }
 
     // fn project_to_absolute_path(&self, project: &EnvProject) -> Utf8PathBuf {
     //     if project.editable {
     //         self.parent_dir().join(project.path.as_str())
     //     } else {
-    //         self.root_dir.join(project.path.as_str())
+    //         self.env_dir.join(project.path.as_str())
     //     }
     // }
 
     fn ensure_lib_dir_exists(&self) -> Result<(), Box<FsIoError>> {
-        let lib_dir = self.root_dir.join(PROJECT_PATH_PREFIX);
+        let lib_dir = self.env_dir.join(PROJECT_PATH_PREFIX);
         match fs::create_dir(&lib_dir) {
             Ok(()) => Ok(()),
             Err(e) => {
@@ -255,8 +255,8 @@ impl LocalDirectoryEnvironment {
                 project_path: absolute,
             }
         } else {
-            let absolute = self.root_dir.join(relative);
-            let relative = format!("{}/{relative}", self.root_dir.file_name().unwrap());
+            let absolute = self.env_dir.join(relative);
+            let relative = format!("{}/{relative}", self.env_dir.file_name().unwrap());
             LocalSrcProject {
                 nominal_path: Some(relative.into()),
                 project_path: absolute,
@@ -489,7 +489,7 @@ impl WriteEnvironment for LocalDirectoryEnvironment {
             // Editable projects are not owned by the env
             if !project.editable {
                 // TODO: maybe surface IO errors?
-                let project_dir = self.root_dir.join(project.path.as_str());
+                let project_dir = self.env_dir.join(project.path.as_str());
                 clean_dir(&project_dir);
                 let _ = fs::remove_dir(&project_dir)
                     .map_err(|e| log::warn!("failed to remove empty dir `{project_dir}`: {e}"));
@@ -509,7 +509,7 @@ impl WriteEnvironment for LocalDirectoryEnvironment {
             assert!(!p.workspace);
             if !p.editable {
                 // TODO: maybe surface IO errors?
-                let project_dir = self.root_dir.join(p.path.as_str());
+                let project_dir = self.env_dir.join(p.path.as_str());
                 clean_dir(&project_dir);
                 let _ = fs::remove_dir(&project_dir)
                     .map_err(|e| log::warn!("failed to remove empty dir `{project_dir}`: {e}"));
