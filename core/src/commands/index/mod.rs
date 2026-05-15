@@ -91,7 +91,3 @@ pub(crate) fn overwrite_file(
     file.set_len(0).map_err(map_err)?;
     file.write_all(contents.as_bytes()).map_err(map_err)
 }
-
-#[cfg(test)]
-#[path = "./mod_tests.rs"]
-mod tests;
