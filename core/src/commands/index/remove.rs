@@ -6,14 +6,15 @@ use std::fs::File;
 use camino::{Utf8Path, Utf8PathBuf};
 use thiserror::Error;
 
+use super::{
+    INDEX_FILE_NAME, JsonFileError, VERSIONS_FILE_NAME, open_json_file, overwrite_file,
+    to_json_string,
+};
+
 use crate::{
     index::{
-        INDEX_FILE_NAME, JsonFileError, VERSIONS_FILE_NAME, open_json_file, overwrite_file,
-        to_json_string,
-    },
-    index_utils::{
-        IndexJson, ParseIriError, ProjectStatus, VersionEntry, VersionStatus, VersionsJson,
-        parse_iri,
+        iri::{ParseIriError, parse_iri},
+        model::{IndexJson, ProjectStatus, VersionEntry, VersionStatus, VersionsJson},
     },
     project::utils::{FsIoError, wrapfs},
 };
