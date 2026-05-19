@@ -19,7 +19,7 @@ use std::sync::Arc;
 use crate::{
     auth::Unauthenticated,
     env::index::{AdvertisedVersion, Sha256HexDigest},
-    index_utils::VersionStatus,
+    index::model::VersionStatus,
     model::InterchangeProjectUsageRaw,
     project::{ProjectReadAsync, index_entry::IndexEntryProject},
     purl::PKG_SYSAND_PREFIX,

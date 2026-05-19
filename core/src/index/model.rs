@@ -4,90 +4,8 @@
 use std::num::NonZeroU64;
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest as _, Sha256};
-use thiserror::Error;
 
-use crate::{
-    iri_normalize::{IriNormalizeError, canonicalize_iri},
-    model::InterchangeProjectUsageRaw,
-    purl::{PKG_SYSAND_PREFIX, SysandPurlError, parse_sysand_purl},
-};
-
-#[derive(Debug, Error)]
-pub enum ParseIriError {
-    #[error("cannot canonicalize IRI `{iri}` for `_iri` bucket")]
-    MalformedIri {
-        iri: Box<str>,
-        #[source]
-        source: IriNormalizeError,
-    },
-    #[error("malformed `pkg:sysand` IRI `{iri}`")]
-    MalformedSysandPurl {
-        iri: Box<str>,
-        #[source]
-        source: SysandPurlError,
-    },
-}
-
-/// Parse an IRI to later construct the index path segments that locate its project directory.
-/// The detailed wire mapping is specified in `docs/src/index-protocol.md`;
-/// this function keeps malformed `pkg:sysand/...` IRIs out of the generic
-/// `_iri/<hash>/` bucket so user typos fail loudly.
-pub(crate) fn parse_iri(iri: &str) -> Result<ParsedIri, ParseIriError> {
-    match parse_sysand_purl(iri) {
-        Ok(Some((publisher, name))) => Ok(ParsedIri::Sysand {
-            publisher: publisher.to_string(),
-            name: name.to_string(),
-        }),
-        Ok(None) => {
-            let malformed = |source| ParseIriError::MalformedIri {
-                iri: iri.into(),
-                source,
-            };
-            let parsed =
-                fluent_uri::Iri::parse(iri).map_err(|e| malformed(IriNormalizeError::Parse(e)))?;
-            let normalized_iri = canonicalize_iri(parsed).map_err(malformed)?;
-            Ok(ParsedIri::Other { normalized_iri })
-        }
-        Err(source) => Err(ParseIriError::MalformedSysandPurl {
-            iri: iri.into(),
-            source,
-        }),
-    }
-}
-
-pub(crate) const IRI_HASH_SEGMENT: &str = "_iri";
-
-pub(crate) fn hash_uri<S: AsRef<str>>(uri: S) -> String {
-    let digest = Sha256::digest(uri.as_ref());
-    format!("{:x}", digest)
-}
-
-#[derive(Debug)]
-pub(crate) enum ParsedIri {
-    Sysand { publisher: String, name: String },
-    Other { normalized_iri: String },
-}
-
-impl ParsedIri {
-    pub(crate) fn get_path(&self) -> String {
-        match self {
-            ParsedIri::Sysand { publisher, name } => format!("{publisher}/{name}"),
-            ParsedIri::Other { normalized_iri } => {
-                format!("{IRI_HASH_SEGMENT}/{}", hash_uri(normalized_iri))
-            }
-        }
-    }
-
-    pub(crate) fn get_iri(&self) -> String {
-        match self {
-            ParsedIri::Sysand { publisher, name } => {
-                format!("{}{}/{}", PKG_SYSAND_PREFIX, publisher, name)
-            }
-            ParsedIri::Other { normalized_iri } => normalized_iri.clone(),
-        }
-    }
-}
+use crate::model::InterchangeProjectUsageRaw;
 
 /// Top-level `index.json` — the list of every project IRI the index knows
 /// about. Used by `uris_async` for list-all enumeration. Per-project version
@@ -114,7 +32,7 @@ pub(crate) enum ProjectStatus {
 
 /// Retirement state of a `versions.json` entry; see the index protocol for
 /// the wire contract and transition rules. An omitted `status` parses as
-/// [`Status::Available`].
+/// [`VersionStatus::Available`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum VersionStatus {
@@ -150,7 +68,7 @@ pub(crate) struct VersionEntry {
     /// body when the archive is downloaded.
     pub(crate) kpar_digest: String,
     /// Retirement state (§8). Optional on the wire; an omitted field
-    /// deserializes as [`Status::Available`].
+    /// deserializes as [`VersionStatus::Available`].
     #[serde(default, skip_serializing_if = "is_default")]
     pub(crate) status: VersionStatus,
 }

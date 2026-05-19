@@ -8,13 +8,12 @@ use camino_tempfile::tempdir;
 use serde_json::{Value, json};
 use zip::{DateTime, write::SimpleFileOptions};
 
-use crate::{
-    index::{
-        add::IndexAddError, do_index_add, do_index_init, do_index_remove, do_index_yank,
-        yank::IndexYankError,
-    },
-    project::utils::wrapfs,
+use super::{
+    add::IndexAddError, do_index_add, do_index_init, do_index_remove, do_index_yank,
+    yank::IndexYankError,
 };
+
+use crate::project::utils::wrapfs;
 
 #[test]
 fn command_test() {

@@ -16,7 +16,7 @@ use thiserror::Error;
 use crate::{
     auth::HTTPAuthentication,
     env::index::{HttpFetchError, IndexEnvironmentError, MissingPolicy, fetch_json},
-    index_utils::parse_iri,
+    index::iri::parse_iri,
 };
 
 const INDEX_PATH: &str = "index.json";

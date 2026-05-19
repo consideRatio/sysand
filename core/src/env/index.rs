@@ -35,7 +35,10 @@ use crate::{
         ReadEnvironmentAsync,
         discovery::{DiscoveryError, ResolvedEndpoints, fetch_index_config},
     },
-    index_utils::{IndexJson, ParseIriError, ProjectStatus, VersionStatus, VersionsJson},
+    index::{
+        iri::ParseIriError,
+        model::{IndexJson, ProjectStatus, VersionStatus, VersionsJson},
+    },
     model::InterchangeProjectUsageRaw,
     project::index_entry::{IndexEntryProject, IndexEntryProjectError},
     resolve::net_utils::json_get_request,

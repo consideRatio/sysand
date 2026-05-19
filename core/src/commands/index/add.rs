@@ -7,14 +7,17 @@ use camino::{Utf8Path, Utf8PathBuf};
 use semver::Version;
 use thiserror::Error;
 
+use super::{
+    INDEX_FILE_NAME, INFO_FILE_NAME, JsonFileError, KPAR_FILE_NAME, META_FILE_NAME,
+    VERSIONS_FILE_NAME, open_json_file, overwrite_file, to_json_string,
+};
+
 use crate::{
     index::{
-        INDEX_FILE_NAME, INFO_FILE_NAME, JsonFileError, KPAR_FILE_NAME, META_FILE_NAME,
-        VERSIONS_FILE_NAME, open_json_file, overwrite_file, to_json_string,
-    },
-    index_utils::{
-        IndexJson, IndexProject, ParseIriError, ParsedIri, ProjectStatus, VersionEntry,
-        VersionStatus, VersionsJson, parse_iri,
+        iri::{ParseIriError, ParsedIri, parse_iri},
+        model::{
+            IndexJson, IndexProject, ProjectStatus, VersionEntry, VersionStatus, VersionsJson,
+        },
     },
     project::{
         CanonicalizationError, ProjectRead as _,

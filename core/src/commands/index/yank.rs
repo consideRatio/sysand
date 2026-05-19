@@ -4,12 +4,16 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use thiserror::Error;
 
+use super::{
+    INDEX_FILE_NAME, JsonFileError, VERSIONS_FILE_NAME, open_json_file, overwrite_file,
+    to_json_string,
+};
+
 use crate::{
     index::{
-        INDEX_FILE_NAME, JsonFileError, VERSIONS_FILE_NAME, open_json_file, overwrite_file,
-        to_json_string,
+        iri::{ParseIriError, parse_iri},
+        model::{IndexJson, VersionStatus, VersionsJson},
     },
-    index_utils::{IndexJson, ParseIriError, VersionStatus, VersionsJson, parse_iri},
     project::utils::{FsIoError, wrapfs},
 };
 

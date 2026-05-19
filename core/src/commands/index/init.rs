@@ -9,9 +9,10 @@ use std::{
 use camino::Utf8Path;
 use thiserror::Error;
 
+use super::{INDEX_FILE_NAME, to_json_string};
+
 use crate::{
-    index::{INDEX_FILE_NAME, to_json_string},
-    index_utils::IndexJson,
+    index::model::IndexJson,
     project::utils::{FsIoError, wrapfs},
 };
 

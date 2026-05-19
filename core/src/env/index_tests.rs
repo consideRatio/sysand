@@ -291,7 +291,7 @@ fn build_minimal_kpar(
 }
 
 mod uris {
-    use crate::{index_utils::ParseIriError, utils::format_sources};
+    use crate::{index::iri::ParseIriError, utils::format_sources};
 
     use super::*;
 
@@ -1673,7 +1673,7 @@ mod get_project {
 /// non-normalized request; a missing normalization step would miss
 /// the mock and fail `expect(1)`.
 mod iri {
-    use crate::{index_utils::hash_uri, iri_normalize::canonicalize_iri};
+    use crate::{index::iri::hash_uri, iri_normalize::canonicalize_iri};
 
     use super::*;
 
