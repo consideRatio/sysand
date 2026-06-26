@@ -44,13 +44,17 @@ jobs:
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
           echo "new=${TAG#v}" >> "$GITHUB_OUTPUT"
 
+      - name: Declare image name
+        id: image-name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       - name: Declare image tags
         id: tags
         uses: jupyterhub/action-major-minor-tag-calculator@40566ffdf246e5a9e640cf768df890ead4424b22 # v4.0.0
         with:
           existingTags: ${{ steps.repo-tags.outputs.tags }}
           newTag: ${{ steps.repo-tags.outputs.new }}
-          prefix: "ghcr.io/${{ github.repository }}:"
+          prefix: "${{ steps.image-name.outputs.image }}:"
 
       - name: Declare alpine image tags
         id: tags-alpine
@@ -58,7 +62,7 @@ jobs:
         with:
           existingTags: ${{ steps.repo-tags.outputs.tags }}
           newTag: ${{ steps.repo-tags.outputs.new }}
-          prefix: "ghcr.io/${{ github.repository }}:"
+          prefix: "${{ steps.image-name.outputs.image }}:"
           suffix: "-alpine"
 
       - name: Wait for release assets to be uploaded
@@ -163,7 +167,7 @@ jobs:
 
       - name: Sign images
         env:
-          IMAGE: ghcr.io/${{ github.repository }}
+          IMAGE: ${{ steps.image-name.outputs.image }}
           IMAGE_DIGEST: ${{ steps.build-image.outputs.digest }}
           ALPINE_IMAGE_DIGEST: ${{ steps.build-alpine-image.outputs.digest }}
         run: |
@@ -173,13 +177,13 @@ jobs:
       - name: Generate image provenance attestation
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-name: ghcr.io/${{ github.repository }}
+          subject-name: ${{ steps.image-name.outputs.image }}
           subject-digest: ${{ steps.build-image.outputs.digest }}
           push-to-registry: true
 
       - name: Generate alpine image provenance attestation
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-name: ghcr.io/${{ github.repository }}
+          subject-name: ${{ steps.image-name.outputs.image }}
           subject-digest: ${{ steps.build-alpine-image.outputs.digest }}
           push-to-registry: true
