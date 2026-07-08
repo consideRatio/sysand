@@ -14,15 +14,15 @@ use sysand_core::{
     },
     context::ProjectContext,
     env::discovery::{ResolvedEndpoints, fetch_index_config},
+    index_location::IndexLocation,
     project::utils::wrapfs,
 };
-use url::Url;
 
 use crate::{CliError, cli::TrustedPublishingMode};
 
 pub fn command_publish(
     path: Option<Utf8PathBuf>,
-    index: Url,
+    index: IndexLocation,
     trusted_publishing: TrustedPublishingMode,
     ctx: &ProjectContext,
     auth_policy: Arc<StandardHTTPAuthentication>,
@@ -36,7 +36,10 @@ pub fn command_publish(
     // Reject obviously-malformed discovery-root URLs (bad scheme,
     // query/fragment components) before issuing any network request —
     // a config typo should not cost a DNS lookup + connect attempt.
-    validate_endpoint_url_shape(&index, EndpointKind::DiscoveryRoot)?;
+    // Template locations were fully validated at argument parse time.
+    if let Some(root) = index.as_root() {
+        validate_endpoint_url_shape(root, EndpointKind::DiscoveryRoot)?;
+    }
     // Validate and prepare the kpar payload before any network work,
     // so that kpar-content errors (bad semver, invalid publisher/name,
     // oversized archive) surface before discovery or credential
@@ -47,12 +50,24 @@ pub fn command_publish(
     // are matched against the actual upload URL. Discovery uses the full auth
     // policy because the discovery document may itself be auth-gated.
     let endpoints = runtime.block_on(fetch_index_config(&client, &*auth_policy, &index))?;
+    let ResolvedEndpoints { api_root, .. } = endpoints;
+    // An index reached through a URL template serves files only; without
+    // an explicit `api_root` from its discovery document there is nothing
+    // to upload to. Check before credential handling so this clearer
+    // error is not masked by credential problems.
+    let Some(api_root) = api_root else {
+        bail!(
+            "index `{index}` does not advertise a publish endpoint, so publishing \
+             to it is not supported; ask the index administrator whether publishing \
+             is available (an index behind a URL template accepts uploads only if \
+             its sysand-index-config.json sets `api_root`)"
+        );
+    };
     // Only now — after discovery has had access to the full policy —
     // do we consume the Arc to extract the publish-specific
     // bearer-credential map. Upload is bearer-only; basic-auth entries
     // are intentionally dropped at this step.
     let bearer_map = Arc::unwrap_or_clone(auth_policy).try_into_publish_bearer_auth_map()?;
-    let ResolvedEndpoints { api_root, .. } = endpoints;
     let trusted_publishing_env = TrustedPublishingEnvironment::from_env();
     let bearer = resolve_publish_bearer(
         &bearer_map,

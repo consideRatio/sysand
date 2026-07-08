@@ -21,6 +21,7 @@ use crate::{
     auth::{ForceBearerAuth, GlobMap, GlobMapResult, HTTPAuthentication},
     env::discovery::{HttpBaseUrlShapeError, validate_http_base_url_shape},
     include::{IncludeError, extract_symbols},
+    index_location::{IndexLocation, with_trailing_slash},
     model::{
         InterchangeProjectUsageRaw, InterchangeProjectValidationError, KERML_METAMODEL_PREFIX,
         KerMlChecksumAlg, SYSML_METAMODEL_PREFIX,
@@ -204,7 +205,7 @@ enum SelectedTrustedPublishingProvider<'a> {
 
 pub fn do_publish(
     prepared: PublishPreparation,
-    discovery_root: Url,
+    discovery_root: IndexLocation,
     api_root: Url,
     auth: ForceBearerAuth,
     client: reqwest_middleware::ClientWithMiddleware,
@@ -331,7 +332,7 @@ pub fn build_upload_url(api_root: &Url) -> Result<Url, PublishError> {
     // The `v1/upload` suffix rejection is part of shape validation.
     validate_endpoint_url_shape(api_root, EndpointKind::ApiRoot)?;
 
-    Ok(crate::env::discovery::with_trailing_slash(api_root.clone())
+    Ok(with_trailing_slash(api_root.clone())
         .join(UPLOAD_ENDPOINT_PATH)
         .unwrap())
 }
@@ -454,7 +455,7 @@ fn exchange_oidc_token_for_index_token(
     client: &reqwest_middleware::ClientWithMiddleware,
     runtime: &Arc<tokio::runtime::Runtime>,
 ) -> Result<String, PublishError> {
-    let exchange_url = crate::env::discovery::with_trailing_slash(api_root.clone())
+    let exchange_url = with_trailing_slash(api_root.clone())
         .join(TRUSTED_PUBLISHING_EXCHANGE_PATH)
         .unwrap();
     let body = serde_json::json!({ "token": oidc_token }).to_string();

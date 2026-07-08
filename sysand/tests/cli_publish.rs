@@ -830,3 +830,48 @@ fn publish_500_json_error_body_extracts_error_message() -> TestResult {
         &["server error (500)", "Invalid token"],
     )
 }
+
+#[test]
+fn publish_to_templated_index_without_api_root_reports_explicit_error() -> TestResult {
+    // An index reached through a `{path}` URL template is file-serving
+    // only; unless its discovery document sets `api_root`, publish must
+    // fail with an actionable message before any upload is attempted.
+    let (_temp_dir, cwd) = setup_built_project("test-publish")?;
+
+    let mut server = Server::new();
+    let config_mock = server
+        .mock("GET", "/files/sysand-index-config.json/raw")
+        .match_query(Matcher::UrlEncoded("ref".into(), "main".into()))
+        .with_status(404)
+        .expect(1)
+        .create();
+
+    let index = format!("{}/files/{{path}}/raw?ref=main", server.url());
+    let out = run_sysand_in(&cwd, ["publish", "--index", index.as_str()], None)?;
+    out.assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "does not advertise a publish endpoint",
+        ))
+        .stderr(predicate::str::contains("index administrator"));
+
+    config_mock.assert();
+    Ok(())
+}
+
+#[test]
+fn publish_index_with_unknown_placeholder_reports_parse_error() -> TestResult {
+    // Template validation happens at argument parse time, before any
+    // network or kpar work.
+    let (_temp_dir, cwd) = init_project("test-publish")?;
+    let out = run_sysand_in(
+        &cwd,
+        ["publish", "--index", "https://example.org/files/{file}/raw"],
+        None,
+    )?;
+    out.assert()
+        .failure()
+        .stderr(predicate::str::contains("unknown placeholder `{file}`"));
+
+    Ok(())
+}
