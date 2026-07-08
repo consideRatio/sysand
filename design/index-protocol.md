@@ -85,6 +85,49 @@ both default to the discovery root. Any other non-success response (e.g.
 Clients MUST follow HTTP redirects on the discovery fetch. Unknown fields
 in the document are silently ignored (see [§14]).
 
+### 3.1. URL templates
+
+An index location — the user-configured index URL, or the `index_root`
+field of the discovery document — MAY be a **URL template** instead of a
+base URL. A URL template contains exactly one placeholder that the client
+substitutes with the relative index path (the path that would otherwise
+be joined onto a base URL, e.g.
+`some-publisher/some-project/1.0.0/project.kpar`):
+
+- `{path}` — the relative path is percent-encoded as a single unit:
+  every byte outside RFC 3986 _unreserved_ is encoded, **including `/` as
+  `%2F`**. This matches file-access APIs that take the whole file path as
+  one URL segment, such as the GitLab repository files API:
+
+  ```text
+  https://gitlab.com/api/v4/projects/123/repository/files/{path}/raw?ref=main
+  ```
+
+- `{path_raw}` — `/` separators stay literal and each path segment is
+  percent-encoded individually. For APIs that take the file path as
+  ordinary URL path segments but require a suffix or query string after
+  it, e.g. Gitea's raw-file API:
+
+  ```text
+  https://gitea.example.org/api/v1/repos/org/repo/raw/{path_raw}?ref=main
+  ```
+
+A string is recognized as a template by the presence of `{` or `}`
+(characters never valid in a URL, so no plain URL is misclassified).
+Templates MUST expand to absolute `http(s)` URLs, MUST NOT contain URL
+userinfo or a fragment, and MUST contain exactly one placeholder, in the
+path or query. Any other `{...}` token is an error. When the configured
+index URL is a template, the discovery document itself is fetched by
+expanding the template with `sysand-index-config.json`, and — absent an
+`index_root` field — all index files are fetched through the same
+template. `api_root` MUST NOT be a template (uploads are not file
+fetches); an index reached through a template whose discovery document
+does not set `api_root` has no API endpoints and is read-only.
+
+Note that append semantics at the end of a URL do not need a template: a
+plain base URL already covers that case. Templates exist for URL
+structures where the path sits mid-URL or a query string follows.
+
 ## 4. Layout
 
 Anchored at `index_root`, a sysand index is a tree:

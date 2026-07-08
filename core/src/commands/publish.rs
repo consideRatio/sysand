@@ -204,7 +204,7 @@ enum SelectedTrustedPublishingProvider<'a> {
 
 pub fn do_publish(
     prepared: PublishPreparation,
-    discovery_root: Url,
+    discovery_root: crate::index_location::IndexLocation,
     api_root: Url,
     auth: ForceBearerAuth,
     client: reqwest_middleware::ClientWithMiddleware,

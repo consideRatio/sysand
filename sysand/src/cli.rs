@@ -14,10 +14,10 @@ use semver::VersionReq;
 use sysand_core::{
     add::expand_sysand_purl_shorthand,
     build::KparCompressionMethod,
+    index_location::IndexLocation,
     model::{KERML_METAMODEL_PREFIX, SYSML_METAMODEL_PREFIX},
     sources::Dependencies,
 };
-use url::Url;
 
 use crate::env_vars;
 
@@ -210,7 +210,7 @@ pub enum Command {
         /// May point to a path containing sysand-index-config.json, or directly
         /// to the API root (e.g. https://sysand.com/api)
         #[arg(long, value_name = "URL", verbatim_doc_comment)]
-        index: Url,
+        index: IndexLocation,
 
         /// How to use CI trusted publishing for acquiring publish credentials
         #[arg(
@@ -1527,6 +1527,10 @@ pub struct InstallOptions {
 pub struct ResolutionOptions {
     /// Comma-delimited list of index URLs to use when resolving
     /// project(s) and/or their dependencies, in addition to the default indexes.
+    /// An index URL may be a URL template with a `{path}` placeholder, which is
+    /// replaced by the percent-encoded relative index path (`/` becomes `%2F`),
+    /// e.g. for an index served through the GitLab repository files API:
+    /// `https://gitlab.com/api/v4/projects/123/repository/files/{path}/raw?ref=main`
     #[arg(
         long,
         num_args = 0..,

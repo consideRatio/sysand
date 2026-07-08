@@ -14,15 +14,15 @@ use sysand_core::{
     },
     context::ProjectContext,
     env::discovery::{ResolvedEndpoints, fetch_index_config},
+    index_location::IndexLocation,
     project::utils::wrapfs,
 };
-use url::Url;
 
 use crate::{CliError, cli::TrustedPublishingMode};
 
 pub fn command_publish(
     path: Option<Utf8PathBuf>,
-    index: Url,
+    index: IndexLocation,
     trusted_publishing: TrustedPublishingMode,
     ctx: &ProjectContext,
     auth_policy: Arc<StandardHTTPAuthentication>,
@@ -36,7 +36,10 @@ pub fn command_publish(
     // Reject obviously-malformed discovery-root URLs (bad scheme,
     // query/fragment components) before issuing any network request —
     // a config typo should not cost a DNS lookup + connect attempt.
-    validate_endpoint_url_shape(&index, EndpointKind::DiscoveryRoot)?;
+    // Template locations were fully validated at argument parse time.
+    if let Some(root) = index.as_root() {
+        validate_endpoint_url_shape(root, EndpointKind::DiscoveryRoot)?;
+    }
     // Validate and prepare the kpar payload before any network work,
     // so that kpar-content errors (bad semver, invalid publisher/name,
     // oversized archive) surface before discovery or credential
@@ -53,6 +56,17 @@ pub fn command_publish(
     // are intentionally dropped at this step.
     let bearer_map = Arc::unwrap_or_clone(auth_policy).try_into_publish_bearer_auth_map()?;
     let ResolvedEndpoints { api_root, .. } = endpoints;
+    // An index reached through a URL template serves files only; without
+    // an explicit `api_root` from its discovery document there is nothing
+    // to upload to.
+    let Some(api_root) = api_root else {
+        bail!(
+            "index `{index}` does not advertise a publish endpoint, so publishing \
+             to it is not supported; ask the index administrator whether publishing \
+             is available (an index behind a URL template accepts uploads only if \
+             its sysand-index-config.json sets `api_root`)"
+        );
+    };
     let trusted_publishing_env = TrustedPublishingEnvironment::from_env();
     let bearer = resolve_publish_bearer(
         &bearer_map,
