@@ -127,6 +127,8 @@ pub enum ResolveUrlError {
         #[source]
         source: url::ParseError,
     },
+    #[error("index URL `{root}` cannot serve as a base for relative paths")]
+    NotABase { root: Box<str> },
 }
 
 /// How a relative index path is encoded when substituted into a template
@@ -208,6 +210,9 @@ impl IndexUrlTemplate {
                     source,
                 });
             }
+            Err(ResolveUrlError::NotABase { .. }) => {
+                unreachable!("IndexUrlTemplate::expand only returns Expand errors")
+            }
         };
         validate_expanded_shape(raw, &expanded)?;
 
@@ -259,9 +264,11 @@ impl IndexLocation {
         }
         // A pre-encoded `%7Bpath%7D` would silently behave as a plain
         // append-mode URL and 404 on every fetch; catch the paste
-        // accident early instead.
+        // accident early instead. Only the exact placeholder spellings
+        // are rejected, so URLs that legitimately contain encoded braces
+        // elsewhere keep working.
         let lower = s.to_ascii_lowercase();
-        if lower.contains("%7b") || lower.contains("%7d") {
+        if lower.contains("%7bpath%7d") || lower.contains("%7bpath_raw%7d") {
             return Err(IndexLocationError::PreEncodedPlaceholder { url: s.into() });
         }
         match url::Url::parse(s) {
@@ -281,6 +288,14 @@ impl IndexLocation {
     pub fn resolve(&self, rel_path: &str) -> Result<url::Url, ResolveUrlError> {
         match self {
             Self::Root(root) => {
+                // Non-hierarchical schemes (`mailto:`, `data:`) parse as
+                // plain URLs but cannot anchor relative paths; error
+                // rather than panic in `with_trailing_slash`.
+                if root.cannot_be_a_base() {
+                    return Err(ResolveUrlError::NotABase {
+                        root: root.as_str().into(),
+                    });
+                }
                 with_trailing_slash(root.clone())
                     .join(rel_path)
                     .map_err(|source| ResolveUrlError::Join {
@@ -316,12 +331,6 @@ impl FromStr for IndexLocation {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::parse(s)
-    }
-}
-
-impl From<url::Url> for IndexLocation {
-    fn from(url: url::Url) -> Self {
-        Self::Root(url)
     }
 }
 

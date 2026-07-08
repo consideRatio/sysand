@@ -176,6 +176,21 @@ fn pre_encoded_placeholder_is_rejected_with_hint() {
 }
 
 #[test]
+fn encoded_braces_that_are_not_placeholders_are_accepted() {
+    let location = IndexLocation::parse("https://example.org/dir%7Bx/idx").unwrap();
+    assert!(matches!(location, IndexLocation::Root(_)));
+}
+
+#[test]
+fn non_base_root_resolve_errors_instead_of_panicking() {
+    let location = IndexLocation::parse("mailto:foo@example.org").unwrap();
+    assert!(matches!(
+        location.resolve("index.json"),
+        Err(ResolveUrlError::NotABase { .. })
+    ));
+}
+
+#[test]
 fn template_fragment_is_rejected() {
     assert!(matches!(
         IndexLocation::parse("https://example.org/files/{path}#frag"),

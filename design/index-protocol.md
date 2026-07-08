@@ -118,7 +118,8 @@ Templates MUST expand to absolute `http(s)` URLs, MUST NOT contain URL
 userinfo or a fragment, and MUST contain exactly one placeholder, in the
 path or query. Any other `{...}` token is an error. When the configured
 index URL is a template, the discovery document itself is fetched by
-expanding the template with `sysand-index-config.json`, and — absent an
+expanding the template with the relative path
+`sysand-index-config.json`, and — absent an
 `index_root` field — all index files are fetched through the same
 template. `api_root` MUST NOT be a template (uploads are not file
 fetches); an index reached through a template whose discovery document
