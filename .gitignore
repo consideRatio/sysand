@@ -8,10 +8,3 @@ sysand-py/python/sysand/_sysand_core.abi3.so
 native-bindings
 version.txt
 .playwright-cli
-
-.agents
-.claude
-.codex
-AGENTS.md
-AGENTS.local.md
-CLAUDE.md
