@@ -169,18 +169,36 @@ at the upload (its existing `403`). An optional per-project pre-flight
 
 ## 7. Publish interaction
 
-Publish is two legs: read discovery to resolve `api_root` (authenticated
-only if the index is private), then bearer POST to `api_root/v1/upload`.
-Its logic is unchanged. Because `login` scopes the one credential to cover
-both roots (§8), publish's existing "match a bearer glob against the upload
-URL" resolution finds the credential.
+Publish is two legs with **different** credential handling:
 
-- Basic-auth logins cannot publish (upload is bearer-only). When `login`
+- **Leg 1, discovery read** (`sysand-index-config.json`, to resolve
+  `api_root`): uses the general read auth policy, so any scheme (basic or
+  bearer) applies, unauth-first, and it is authenticated only if the index
+  is private. Because `login` scopes the credential to the index root, a
+  private index's discovery fetch gets it.
+- **Leg 2, upload** (`POST api_root/v1/upload`): **bearer only**, sent
+  proactively (an upload cannot be tried unauthenticated then retried). So
+  publish reads the keyring up front at this step, one keychain access, and
+  selects the bearer whose glob matches the upload URL.
+
+The one change to publish's own logic is bearer **selection**: it adopts
+most-specific-glob-wins (§8) instead of the old "exactly one match or
+error", so overlapping env/keyring/`auth set` globs resolve to the tightest
+match rather than failing. The two-leg flow and trusted publishing are
+otherwise unchanged.
+
+- **Trusted-publishing precedence:** in `auto` mode publish uses OIDC
+  trusted publishing when a supported CI environment is detected, and
+  otherwise falls back to the merged bearer map (env > keyring). CI has no
+  keyring, so the two rarely coexist.
+- **Basic-auth logins cannot publish** (leg 2 is bearer-only). When `login`
   detects a publishable index (`api_root` advertised) and the user chose
   `--username`, it warns.
-- When the bearer map is built from env + keyring together, precedence
-  (§9) is applied at build time so the two sources cannot both match the
-  upload URL and trip publish's match rule.
+- **No matching bearer** fails up front (before the upload) with a hint to
+  run `sysand auth login <index>` to store a publish token.
+- **Fail fast on expiry:** if the selected bearer carries a known
+  `expires_at` (§9) that has passed, publish errors before uploading the
+  archive rather than after, and points at `sysand auth login`.
 
 ## 8. Glob scoping and conflict resolution
 
