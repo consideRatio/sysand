@@ -91,23 +91,24 @@ not create duplicate entries.
 
 ## 5. Validation
 
-`auth login` takes `--validate full|none` (default `full`).
+`auth login` takes `--validation true|false` (default `true`).
 
-- `--validate full` (default): probe every surface the index supports and
+- `--validation true` (default): probe every surface the index supports and
   store unless the credential is rejected everywhere it was actually
   tested (see the refusal rule below). A static index has only the read
   surface; a dynamic index adds the API.
-- `--validate none`: store without any credential probe. The index-aware
+- `--validation false`: store without any credential probe. The index-aware
   counterpart to `auth set`: discovery is still fetched best-effort for
   glob scoping (§8) and the entry is per-index, but no probe runs. If
   discovery is unreachable, fall back to the index-root glob with a
   warning. Use it offline, or when a probe would false-refuse.
 
-There are no per-surface levels. Since `v1/whoami` checks only that a token
-is _accepted_ by the API (identity, not capability, see §6), `full` almost
-never wrongly refuses a valid token, so an intermediate "read-only" level
-would add a choice without real payoff. If a genuine need appears the
-`--validate` enum can gain values without a redesign.
+Validation is a boolean, not a set of per-surface levels. Since `v1/whoami`
+checks only that a token is _accepted_ by the API (identity, not
+capability, see §6), validating everything almost never wrongly refuses a
+valid token, so an intermediate "read-only" level would add a choice
+without real payoff. If a genuine need appears, `--validation` could later
+give way to a levelled flag without disrupting this default.
 
 Because `api_root` is known only after reading discovery, validation is
 discovery-first: fetch discovery (this also exercises the credential
@@ -143,7 +144,7 @@ is credential validation and identity for `auth status`.
 
 - `GET api_root/v1/whoami`, bearer credential.
 - `200` on a valid, unexpired token; `401` otherwise. Under
-  `--validate full` a `200` passes the API leg (see §5).
+  `--validation true` a `200` passes the API leg (see §5).
 - Body on `200`:
 
 ```json
@@ -240,7 +241,7 @@ Each phase is independently shippable.
 3. **`v1/whoami`** (index server side): identity + token metadata,
    acceptance via HTTP status.
 4. **`auth login` / `auth logout`.** Discovery fetch, glob derivation
-   including divergent-`api_root` scoping, `--validate full|none`,
+   including divergent-`api_root` scoping, `--validation true|false`,
    the refusal rule, and capability-scoped output.
 5. **Enforce P2** (client): drop the plain-URL `api_root` default in
    `core/src/env/discovery.rs`; update `design/index-protocol.md`.
