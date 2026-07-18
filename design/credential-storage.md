@@ -196,12 +196,10 @@ URL" resolution finds the credential.
   `index_root/**` and `api_root/**` (minimal, non-overlapping), so the
   upload URL matches exactly the api glob. Templated indexes are inherently
   Case B (their `api_root` is a disjoint plain URL).
-- Each login is **one entry**: the secret lives in the OS keyring (keyed by
-  the normalized index URL) and its metadata (`{globs, scheme}`; the
-  username too, for basic auth) lives in the non-secret manifest (§9). So
-  `logout` removes both, and `status` shows one login covering N patterns.
-  Globs are cached at login time; re-login refreshes them if the index
-  later relocates `api_root`.
+- Each login is one record (`{key, globs, scheme, username-if-basic,
+secret}`) inside the single keyring blob (§9), so `logout` removes it and
+  `status` shows one login covering N patterns. Globs are cached at login
+  time; re-login refreshes them if the index later relocates `api_root`.
 
 ## 9. Storage, consumption, precedence, security
 
@@ -209,20 +207,24 @@ URL" resolution finds the credential.
   Manager, Linux Secret Service via the `keyring` crate), with environment
   variables as the automatic fallback where no keyring exists. **No
   plaintext credentials file, ever.**
-- **Manifest.** The `keyring` crate cannot portably enumerate entries, but
-  `auth status` must list all stored credentials, consumption must know
-  which globs to match, and `logout` / `unset` must find an entry. So a
-  **non-secret manifest** in the config dir records each entry's
-  `{key (URL or pattern), globs, scheme, username-if-basic}`. The secret
-  itself stays in the keyring, keyed by that key. The manifest holds no
-  secrets, so the no-plaintext-credentials rule still holds.
-- **Consumption is lazy.** At request time sysand reads the manifest, adds
-  its globs (plus any `SYSAND_CRED_*` from env) to the auth map, and fetches
-  a secret from the keyring only when a request actually matches that glob.
-  Map values are credential handles, not eagerly loaded secrets, so an
-  unrelated command does not trigger a keyring read (and its possible OS
-  access prompt) for creds it never uses. `auth status` reads the manifest
-  only and never touches the keyring.
+- **Single keyring entry.** All persisted credentials live in **one**
+  keyring entry (for example `service = "sysand"`, `account =
+"credentials"`) holding a JSON blob: a list of records
+  `{key (URL or pattern), globs, scheme, username-if-basic, secret}`. This
+  is deliberate over a separate manifest file: the `keyring` crate cannot
+  portably enumerate entries, and one blob is **atomic** (metadata and
+  secret cannot drift), needs **no file**, and prompts the OS keychain at
+  most once. `login` / `logout` / `set` / `unset` read-modify-write the
+  blob under a process lock; `status` reads it. The only cost is scale:
+  Windows Credential Manager caps a blob at ~2.5 KB
+  (`CRED_MAX_CREDENTIAL_BLOB_SIZE` = 2560), roughly ten entries, so a write
+  that would exceed it fails with a clear "credential store full on this
+  platform, remove an unused login" error rather than silently truncating.
+- **Consumption.** At request time sysand reads the one blob, merges its
+  records (plus any `SYSAND_CRED_*` from env) into the auth map, and applies
+  the credential whose glob matches. Reading the blob loads every stored
+  secret into memory for the duration of the command; that is acceptable
+  and keeps keychain access to a single prompt.
 - **Keyring error taxonomy:** _absent_ backend (no Secret Service on a
   headless Linux box) falls back to env; _present-but-locked/denied_
   surfaces the error and suggests unlocking, rather than silently
@@ -231,8 +233,8 @@ URL" resolution finds the credential.
   print the exact `SYSAND_CRED_*` lines to set instead.
 - **Precedence** per URL: `SYSAND_CRED_*` > keyring > unauthenticated
   (so CI can override an interactive login). For publish this is enforced
-  at map-build via most-specific-glob-wins (§8); for reads (try-all), a
-  matching env entry is tried before a keyring entry for the same URL.
+  via most-specific-glob-wins (§8); for reads (try-all), a matching env
+  entry is tried before a keyring entry for the same URL.
 - **Expiry UX:** on a 401 against a stored credential, suggest re-running
   `sysand auth login`. `v1/whoami`'s `expires_at` also enables a proactive
   "expires in N days" note.
@@ -250,11 +252,11 @@ own credential system).
 
 Each phase is independently shippable.
 
-1. **Credential store.** Keyring + non-secret manifest + env fallback,
-   keyring error taxonomy, index-URL normalization, lazy secret resolution
-   (map values are handles), most-specific-wins lookup. Wire it into the
-   startup auth builder, replacing the `SYSAND_CRED_*`-only scan in
-   `sysand/src/lib.rs`. Delivers persistence on its own.
+1. **Credential store.** Single-keyring-blob store (read-modify-write under
+   a process lock) + env fallback, keyring error taxonomy, index-URL
+   normalization, most-specific-wins lookup. Wire it into the startup auth
+   builder, replacing the `SYSAND_CRED_*`-only scan in `sysand/src/lib.rs`.
+   Delivers persistence on its own.
 2. **`auth set` / `auth unset` / `auth status`.** Thin CLI over the store,
    no validation.
 3. **`v1/whoami`** (index server side): identity + token metadata,
