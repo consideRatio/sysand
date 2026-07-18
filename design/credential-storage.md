@@ -364,9 +364,6 @@ trailing-slash links). Pages to touch:
   `docs/source/client/explanation/authentication.md`: keyring persistence,
   the read vs API surfaces, validation, the publish two-leg flow, and the
   discovery-drift security boundary (§8).
-- **Changelog** `docs/source/client/reference/changelog.md`: the new
-  `sysand auth` commands and the P2 breaking-change note for third-party
-  plain-URL dynamic indexes.
 - **Index side, light**: cross-link `v1/whoami` from the index API
   reference if user-facing; the token pages
   (`docs/source/index/reference/api-tokens.md`,
