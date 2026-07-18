@@ -334,9 +334,16 @@ scheme, secret, expires_at-if-known}`. Deliberate over a manifest file:
   front and would force the read). This replaces the eager immutable policy
   built in `sysand/src/lib.rs`, and ripples into the concrete
   `StandardHTTPAuthentication` alias used by `command_publish` and
-  `try_into_publish_bearer_auth_map`, which must accept the new type. It
-  defers the blob read to the first auth-relevant 4xx (or publish / `auth`
-  command), reads the whole blob once, and caches it for the process.
+  `try_into_publish_bearer_auth_map`, which must accept the new type. Because
+  `LazyKeyringLayer` holds a cache (`OnceCell`/`Mutex`) it is not `Clone`, so
+  publish's `Arc::unwrap_or_clone(...).try_into_publish_bearer_auth_map()`
+  (publish.rs) must become a **by-ref** extraction (it already clones secrets
+  into the new map), or the cache must be `Arc`-wrapped. It defers the blob
+  read to the first auth-relevant 4xx (or publish / `auth` command), reads
+  the whole blob once, and caches it for the process. Escalation semantics to
+  pin at implementation: a **failed** env credential (env 4xx) escalates into
+  the keyring layer, and when the keyring layer has no matching record it
+  re-issues the unauthenticated request to produce the final response.
   - **Never read** for local/offline commands, for reads that succeed
     unauthenticated (public indexes return 200 and never touch the keyring),
     or for users who never ran `auth login` (no entry: a cheap "not found",
@@ -415,7 +422,8 @@ Each phase is independently shippable.
    resolution; non-interactive fail-fast; discovery fetch; glob derivation
    (discovery/index root + divergent `api_root`); `--validation true|false`
    with forced-auth probes and the refusal rule; `expires_at` persistence;
-   discovery-drift detection + message; env-shadow warning.
+   env-shadow warning. The tailored discovery-drift message (§8) is
+   **best-effort** here, not required for the phase to ship.
 4. **Docs and specs** (§12, §13). Protocol specs in this repo; user docs in
    the `sysand-index` repo (docs.sysand.com).
 
