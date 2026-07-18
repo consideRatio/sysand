@@ -217,8 +217,24 @@ otherwise unchanged.
 - Each login is one record (`{key, globs, scheme, username-if-basic,
 secret, expires_at-if-known}`) inside the single keyring blob (§9), so
   `logout` removes it and `status` shows one login covering N patterns.
-  Globs are cached at login time; re-login refreshes them if the index
-  later relocates `api_root`.
+- **Discovery changes over time (globs are a security boundary).** Reads
+  and publish re-fetch discovery live each run, but the stored globs are the
+  login-time snapshot and are **not** auto-updated from discovery. This is
+  deliberate: discovery (`sysand-index-config.json`) is potentially
+  attacker-influenceable (plain HTTP, a compromised or spoofed index), and
+  auto-following it would let a changed `api_root`/`index_root` silently
+  redirect the stored token to a new, possibly hostile host. So when a
+  discovery change moves a root **outside** the cached globs, the credential
+  simply stops matching and the request fails cleanly (a `401`, or "no
+  bearer" on publish) rather than sending the token to the new location.
+  sysand detects this specific case, a login exists for the index but the
+  freshly-resolved root is not covered by its globs, and prints "the index
+  configuration has changed since you logged in; re-run
+  `sysand auth login <index>` to update". Re-login re-derives the globs and
+  re-validates the token against the new roots, with the user's consent to
+  send it there. Because `login` derives **narrow** globs, a move to a
+  different host or path falls outside and fails safely rather than being
+  followed.
 
 ## 9. Storage, consumption, precedence, security
 
