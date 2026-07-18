@@ -91,38 +91,50 @@ not create duplicate entries.
 
 ## 5. Validation
 
-`auth login` takes `--validate none|index|api` (default `index`). The
-values name the surface probed, not a capability: `index` = the index read
-surface (`index_root`), `api` = the API (`api_root`). This is deliberate:
-`v1/whoami` only checks that the token is _accepted_ by the API, not that
-it can write, so a capability name like `write` would overclaim and would
-break if a read-only-api token type is ever introduced. Any future
-capability granularity is a separate dimension (for example a hypothetical
-`--require publish`), not a rename of these values.
+`auth login` takes `--validate full|none` (default `full`).
 
-- `--validate index` (default): probe the read surface. On a private index,
-  an unauth-4xx followed by an authed-2xx verifies; an authed-4xx refuses.
-  On a public read surface there is nothing to check: "stored, not
-  verified."
-- `--validate api`: probe `api_root/v1/whoami`. A `200` verifies (the token
-  is accepted by the API); refuse if it is rejected. Implies index-read
-  under C2.
-- `--validate none`: store without a credential probe. This is the
-  index-aware counterpart to `auth set`: discovery is still fetched
-  best-effort for glob scoping (§8) and the entry is per-index, but no
-  probe runs. If discovery is unreachable, fall back to the index-root glob
-  with a warning. Use it offline, or when a probe would false-refuse.
+- `--validate full` (default): probe every surface the index supports and
+  store unless the credential is rejected everywhere it was actually
+  tested (see the refusal rule below). A static index has only the read
+  surface; a dynamic index adds the API.
+- `--validate none`: store without any credential probe. The index-aware
+  counterpart to `auth set`: discovery is still fetched best-effort for
+  glob scoping (§8) and the entry is per-index, but no probe runs. If
+  discovery is unreachable, fall back to the index-root glob with a
+  warning. Use it offline, or when a probe would false-refuse.
+
+There are no per-surface levels. Since `v1/whoami` checks only that a token
+is _accepted_ by the API (identity, not capability, see §6), `full` almost
+never wrongly refuses a valid token, so an intermediate "read-only" level
+would add a choice without real payoff. If a genuine need appears the
+`--validate` enum can gain values without a redesign.
 
 Because `api_root` is known only after reading discovery, validation is
-discovery-first: fetch discovery (with the credential, which also verifies
-the read leg on a private index), then, if applicable, probe `v1/whoami`.
+discovery-first: fetch discovery (this also exercises the credential
+against the discovery root on a private index), resolve `index_root` and
+`api_root`, then probe `index_root/index.json` and, if the index has an
+API, `api_root/v1/whoami`.
 
-**Refusal rule:** refuse to store only on a _proven auth-gated reject_,
-either an unauth-4xx-then-authed-4xx escalation, or a rejection from
-`v1/whoami` (an endpoint we know is always authenticated). A bare
-third-party 403 without that proof downgrades to "stored, not verified".
-Never print a bare "verified"; always scope the claim to what the probe
-covered.
+**Refusal rule.** Store if the credential is _accepted by any surface it
+actually tested_, warning about any surface that rejected or was
+unreachable. Refuse only when at least one exercised surface rejected the
+credential and none accepted it. A surface counts as "tested" only if the
+credential was exercised: a _public_ read surface returns 200 without
+sending the credential, so it proves nothing. If nothing exercised the
+credential (fully public read with no API, or every probe unreachable),
+store as "stored, not verified".
+
+This self-adjusts across the situation space:
+
+- Private index, read works, API rejects: store with an "API access failed"
+  warning (the token is still useful for reading).
+- Public-read index (for example sysand.com): the read probe never tests
+  the token, so `v1/whoami` is the only real test, and a rejected token is
+  refused, keeping the publish flow protected.
+- Every exercised surface rejects: refuse.
+
+Never print a bare "verified"; always scope the claim to the surfaces that
+actually accepted the credential.
 
 ## 6. The `v1/whoami` endpoint
 
@@ -130,8 +142,8 @@ New endpoint on the index API (server side), under `api_root`. Its purpose
 is credential validation and identity for `auth status`.
 
 - `GET api_root/v1/whoami`, bearer credential.
-- `200` on a valid, unexpired token; `401` otherwise. The `200` is the
-  `--validate api` pass signal.
+- `200` on a valid, unexpired token; `401` otherwise. Under
+  `--validate full` a `200` passes the API leg (see §5).
 - Body on `200`:
 
 ```json
@@ -228,7 +240,7 @@ Each phase is independently shippable.
 3. **`v1/whoami`** (index server side): identity + token metadata,
    acceptance via HTTP status.
 4. **`auth login` / `auth logout`.** Discovery fetch, glob derivation
-   including divergent-`api_root` scoping, `--validate none|index|api`,
+   including divergent-`api_root` scoping, `--validate full|none`,
    the refusal rule, and capability-scoped output.
 5. **Enforce P2** (client): drop the plain-URL `api_root` default in
    `core/src/env/discovery.rs`; update `design/index-protocol.md`.
