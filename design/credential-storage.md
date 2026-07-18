@@ -415,7 +415,9 @@ Each phase is independently shippable.
    source-precedence lookup, Windows size-limit handling. Introduce the
    **deferred/cached auth policy** that reads the blob on demand and caches
    it, replacing the eager `SYSAND_CRED_*`-only build in
-   `sysand/src/lib.rs`. Delivers persistence on its own.
+   `sysand/src/lib.rs`. Delivers persistence on its own. Crate placement per
+   §14 (store trait and policy layer in core; keyring impl behind the
+   `keyring` feature).
 2. **`v1/whoami`** (server side, `sysand-index` repo): identity + token
    metadata, acceptance via HTTP status, routed at `api/v1/whoami`.
 3. **`auth login` / `logout` / `status`.** Bearer-only; default-index
@@ -472,3 +474,40 @@ trailing-slash links). Pages to touch:
   pointer.
 - **CLI help**: `about`/`long_about` text for the `sysand auth` command and
   subcommands (in this repo), which the reference pages mirror.
+
+## 14. Code placement (core vs CLI vs bindings)
+
+The workspace splits into `core` (`sysand-core`, consumed by the CLI **and**
+the py/js/java bindings; the js binding compiles to wasm) and `sysand` (the
+CLI). Placement follows the repo's existing pattern: `do_*` command logic in
+`core/src/commands/`, thin wrappers in `sysand/src/commands/`, optional
+capabilities behind cargo features (`filesystem`, `networking`).
+
+- **core, unconditional (wasm-safe):** the record types and blob JSON codec
+  (pure serde); a `CredentialStore` trait; the `LazyKeyringLayer` policy
+  layer generic over that trait, composed as
+  `SequenceAuthentication<EnvLayer, LazyLayer<S>>` alongside `auth.rs`.
+- **core, behind a new `keyring` cargo feature:** the OS-keyring-backed
+  `CredentialStore` impl and the cross-process file lock (uses `dirs`,
+  mirroring `filesystem`). Enabled by the CLI and the py/java bindings;
+  **off for the js/wasm binding**, since the `keyring` crate does not build
+  for wasm, this is what keeps the wasm build green. A browser-side store
+  could later implement the same trait (bindings/js already has
+  local-storage machinery), but that is not v1 and localStorage is not
+  secure storage.
+- **core `commands/auth.rs`:** `do_auth_login` / `do_auth_logout` /
+  `do_auth_status` orchestration (discovery fetch, glob derivation,
+  validation probes, refusal rule), generic over the store trait.
+  **A library call must never prompt**: the secret arrives as a parameter,
+  and `validation: Option<bool>` is a plain argument, which is exactly what
+  gives the bindings their clean optional keyword (§5).
+- **sysand CLI:** the clap surface, hidden prompt, TTY detection,
+  `--token-stdin`, default-index resolution, and user-facing messages; it
+  constructs the keyring store and the composed policy and passes them into
+  core, exactly like today's `auth_policy` handoff in `sysand/src/lib.rs`.
+
+**Index reading and the keyring.** Reads in core stay generic over
+`HTTPAuthentication` (`IndexEnvironmentAsync<Policy>`), so core's
+index-reading code gains no keyring knowledge at compile time. At runtime
+the keyring is touched only inside the policy instance the host constructed
+and handed in; on wasm no such instance exists and reads behave as today.
