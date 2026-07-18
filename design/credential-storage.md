@@ -220,11 +220,29 @@ secret}`) inside the single keyring blob (§9), so `logout` removes it and
   (`CRED_MAX_CREDENTIAL_BLOB_SIZE` = 2560), roughly ten entries, so a write
   that would exceed it fails with a clear "credential store full on this
   platform, remove an unused login" error rather than silently truncating.
-- **Consumption.** At request time sysand reads the one blob, merges its
-  records (plus any `SYSAND_CRED_*` from env) into the auth map, and applies
-  the credential whose glob matches. Reading the blob loads every stored
-  secret into memory for the duration of the command; that is acceptable
-  and keeps keychain access to a single prompt.
+- **Consumption and keyring access.** The blob is read only when a
+  credential might actually be needed, to avoid unnecessary OS keychain
+  prompts:
+  - **Never read** for local/offline commands, for reads that succeed
+    unauthenticated (the existing unauth-first policy: public indexes like
+    sysand.com return 200 and never touch the keyring), or for users who
+    never ran `auth login` (no entry exists, so the lookup is a cheap "not
+    found" with no unlock).
+  - **Read once, then cache** for the process on the first auth-relevant
+    4xx during an unauth-first read, on publish's authenticated leg, and on
+    the explicit `auth *` commands. In-process caching means at most one
+    keychain touch per command regardless of request count.
+  - Reads escalate on **any** 4xx (not just 401/403), because some hosts
+    (GitLab) answer `404` on missing/under-scoped auth. The cost is that a
+    logged-in user on a _locked_ Linux keyring may see one unlock prompt on
+    a non-auth 404; this is rare, once per session, and preferred over
+    breaking the zero-config GitLab flow or reintroducing a separate glob
+    file. (Possible future refinement, gated on `keyring` support for
+    non-forcing reads: force an unlock only on `401`/`403`, and on a bare
+    `404` use the keyring only if it is already unlocked.)
+  - In steady state keychain reads are silent: Windows has no per-access
+    prompt, macOS grants the signed app a one-time "always allow", and an
+    unlocked Linux keyring does not re-prompt.
 - **Keyring error taxonomy:** _absent_ backend (no Secret Service on a
   headless Linux box) falls back to env; _present-but-locked/denied_
   surfaces the error and suggests unlocking, rather than silently
