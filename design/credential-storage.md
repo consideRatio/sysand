@@ -334,11 +334,43 @@ Each phase is independently shippable.
    without the field) becomes read-only and must serve
    `sysand-index-config.json` with an explicit `api_root`. The official
    index is unaffected (it already serves it).
-6. **Docs.** Update the client authentication how-to and reference to cover
-   `sysand auth`, the keyring/env precedence, and when to use each.
+6. **Docs and specs** (§12, §13). Protocol specs in this repo; user docs in
+   the `sysand-index` repo (docs.sysand.com).
 
-## 12. Protocol/spec changes required
+## 12. Protocol/spec changes (this repo, `design/`)
 
 - `design/index-api-protocol.md`: specify `v1/whoami` (§6).
 - `design/index-protocol.md`: enforce P2 (an index has an API iff
   discovery advertises `api_root`; remove the plain-URL default).
+
+## 13. Documentation (docs.sysand.com, in the `sysand-index` repo)
+
+Cross-repo: the published docs live under `docs/source/` in `sysand-index`,
+not here. Follow that repo's `docs/README.md` (sentence case, no em-dash,
+trailing-slash links). Pages to touch:
+
+- **Reference, rewrite** `docs/source/client/reference/authentication.md`:
+  the `sysand auth` model, single-keyring storage, `--validation`,
+  precedence (`SYSAND_CRED_*` > keyring), read/API surfaces. Keep the
+  `SYSAND_CRED_*` reference, it remains the CI / no-keyring path.
+- **Reference, new** `docs/source/client/reference/commands/auth/`
+  subdirectory (mirroring `commands/index/` and `commands/env/`): an
+  `auth-command.md` parent plus `login.md`, `logout.md`, `set.md`,
+  `unset.md`, `status.md`; add them to the command toctree.
+- **How-to, rewrite** `docs/source/client/how-to/authenticate-to-an-index.md`:
+  lead with `sysand auth login`; demote the env-var steps to a CI / fallback
+  section.
+- **Explanation, update**
+  `docs/source/client/explanation/authentication.md`: keyring persistence,
+  the read vs API surfaces, validation, the publish two-leg flow, and the
+  discovery-drift security boundary (§8).
+- **Changelog** `docs/source/client/reference/changelog.md`: the new
+  `sysand auth` commands and the P2 breaking-change note for third-party
+  plain-URL dynamic indexes.
+- **Index side, light**: cross-link `v1/whoami` from the index API
+  reference if user-facing; the token pages
+  (`docs/source/index/reference/api-tokens.md`,
+  `how-to/create-an-api-token.md`) may gain a "use with `sysand auth login`"
+  pointer.
+- **CLI help**: `about`/`long_about` text for the `sysand auth` command and
+  subcommands (in this repo), which the reference pages mirror.
