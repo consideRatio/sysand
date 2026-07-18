@@ -81,16 +81,26 @@ Under a `sysand auth` namespace:
 | `sysand auth status`             | list stored credentials (never secrets), backend, and `SYSAND_CRED_*` shadowing |
 
 - **Bearer only in v1.** The token is entered via a hidden prompt
-  ("Enter API token for `<index>`:") or `--token-stdin`, never an inline
-  value flag (shell-history / `ps` leakage). Basic auth (`--username`) and
-  raw-pattern `auth set` / `unset` are deferred (§10); request-time basic
-  auth via `SYSAND_CRED_*` still works.
+  ("Enter token for `<index>`:", neutral wording since the credential may be
+  a forge PAT rather than a Sysand API token) or `--token-stdin`, never an
+  inline value flag (shell-history / `ps` leakage). Basic auth
+  (`--username`) and raw-pattern `auth set` / `unset` are deferred (§10);
+  request-time basic auth via `SYSAND_CRED_*` still works.
 - **Non-interactive safety.** If stdin is not a TTY and `--token-stdin` was
   not given, `login` fails fast ("no terminal for prompt; pass the token
   with `--token-stdin`") instead of hanging or reading a pipe as a secret.
-- **Default index.** `sysand auth login` with no URL targets the configured
-  default index (the same resolution `publish` uses), so onboarding to
-  sysand.com is a bare command.
+- **Default index.** `sysand auth login` with no URL resolves the target
+  from the default-index chain: `--default-index` / `SYSAND_DEFAULT_INDEX`,
+  then a `default = true` index in configuration, else the built-in
+  `DEFAULT_INDEX_URL` (`https://sysand.com`). Note `sysand publish` has no
+  such default (its `--index` is required), so this chain is defined here,
+  not borrowed. If the chain yields **more than one** default index, bare
+  `login` errors and asks for an explicit URL. `login` always **echoes the
+  resolved index** before prompting (and on the `--token-stdin` path), so a
+  project-configured default cannot be targeted silently.
+- **HTTP(S) only.** `auth login` against a non-HTTP(S) location (for
+  example a local file path, which index resolution accepts elsewhere)
+  errors with "not an HTTP(S) index; nothing to authenticate to".
 - **Glob derivation** (§8): automatic from the URL; no manual `--pattern` in
   v1. If derivation is ever wrong for an unusual layout, the `SYSAND_CRED_*`
   env var is the escape hatch until `--pattern` / `auth set` land (§10).
@@ -137,7 +147,15 @@ after reading discovery): fetch discovery, resolve `index_root` and
 `api_root`, probe `index_root/index.json`, and, **only if discovery
 advertised an `api_root`** (not the runtime plain-URL default, §3), probe
 `api_root/v1/whoami`, so a static plain-URL index is never phantom-probed
-for an API it does not have.
+for an API it does not have. **Probes do not follow redirects**: a redirect
+would mean the verdict comes from a different URL than the surface nominally
+probed (and a cross-host redirect strips the header, misreading "rejected"),
+so a redirected probe counts as "not tested" with a warning naming the
+redirect target.
+
+User-visible wording uses one stem, **validated**: "validated (read)",
+"stored, not validated", matching the `--validation` flag, rather than
+mixing "verified"/"unvalidated" families.
 
 **Refusal rule.** Store if the credential is _accepted by any surface it
 actually tested_, warning about any surface that rejected or was
@@ -146,7 +164,7 @@ credential and none accepted it. A surface counts as "tested" only if the
 credential was exercised: a _public_ read surface returns 200 without
 sending the credential, so it proves nothing. If nothing exercised the
 credential (fully public read with no API, or every probe unreachable),
-store as "stored, not verified".
+store as "stored, not validated".
 
 This self-adjusts across the situation space:
 
@@ -157,7 +175,14 @@ This self-adjusts across the situation space:
   refused, keeping the publish flow protected.
 - Every exercised surface rejects: refuse.
 
-Never print a bare "verified"; always scope the claim to the surfaces that
+**Basic-auth indexes must not dead-end.** In bearer-only v1, a user of a
+private basic-auth index will naturally try `auth login` and be refused. The
+read probe sees the server's `WWW-Authenticate: Basic` challenge, so the
+refusal message must say so and route the user to the working path: "this
+index uses username/password (HTTP basic) authentication; configure
+`SYSAND_CRED_<X>_BASIC_USER` / `_BASIC_PASS` instead (see docs)".
+
+Never print a bare "validated"; always scope the claim to the surfaces that
 actually accepted the credential.
 
 ## 6. The `v1/whoami` endpoint
@@ -210,21 +235,23 @@ Publish is two legs with **different** credential handling:
   only if the index is private. `login` scopes the credential to cover the
   discovery/index root (§8), so a private index's discovery fetch gets it.
 - **Leg 2, upload** (`POST api_root/v1/upload`): **bearer only**, sent
-  proactively (an upload cannot be tried unauthenticated then retried), so
-  publish reads the keyring up front here (one keychain access) and selects
-  the bearer whose glob matches the upload URL.
+  proactively (an upload cannot be tried unauthenticated then retried).
+  Publish checks env bearers first; only when **no env bearer matches** does
+  it read the keyring blob (one keychain access), consistent with "never
+  read the keyring when env already works". It then selects the bearer whose
+  glob matches the upload URL.
 
 The one change to publish's bearer selection is **source precedence**: try
 env bearer matches first (single match within env), then keyring (single
 match within keyring), instead of one flat "exactly one match or error" over
 the merged set. Within a source the existing exactly-one rule stands (its
 `AmbiguousPublishBearer` error becomes per-source). Concretely this changes
-`try_into_publish_bearer_auth_map` / `resolve_publish_bearer_from_config` in
-`core/src/commands/publish.rs` to keep env and keyring as **two maps** (or
-source-tagged) with a two-stage lookup, rather than collapsing to one flat
-`GlobMap`. This makes the stated precedence real, a CI `SYSAND_CRED_*`
-overrides an interactive login. The two-leg flow and trusted publishing are
-otherwise unchanged.
+`try_into_publish_bearer_auth_map` (in `core/src/auth.rs`) and
+`resolve_publish_bearer_from_config` (in `core/src/commands/publish.rs`) to
+keep env and keyring as **two maps** (or source-tagged) with a two-stage
+lookup, rather than collapsing to one flat `GlobMap`. This makes the stated
+precedence real, a CI `SYSAND_CRED_*` overrides an interactive login. The
+two-leg flow and trusted publishing are otherwise unchanged.
 
 - **Trusted-publishing precedence:** in `auto` mode publish uses OIDC
   trusted publishing when a supported CI environment is detected, and
@@ -234,11 +261,20 @@ otherwise unchanged.
   `SYSAND_CRED_*` entry is ignored for the upload.
 - **No matching bearer** fails up front (before the upload) with a hint to
   run `sysand auth login <index>` to store a publish token.
-- **Fail fast on expiry (advisory):** if the selected bearer carries a known
-  `expires_at` (§9) already past, publish warns and stops before uploading
-  the archive, pointing at `sysand auth login`. Because a fast client clock
-  could false-trip this, it is advisory (the server's `401` remains the
-  authority); allow a small skew margin.
+- **Auth failures name the credential's source.** Because env shadows
+  keyring, "re-run `sysand auth login`" is the wrong fix when the rejected
+  bearer came from a stale `SYSAND_CRED_*` var (a fresh login would stay
+  shadowed and the user would loop). So an upload auth failure states where
+  the selected bearer came from ("from `SYSAND_CRED_TEAMIDX`" vs "from your
+  stored login for `<index>`") and tailors the remediation (unset/rotate the
+  env var vs re-login). A `403` (authorization, not authentication)
+  additionally points at `sysand auth status`, which shows the stored
+  `subject`, catching "this is a project token for a different project".
+- **Fail fast on expiry:** if the selected bearer carries a known
+  `expires_at` (§9) already past (with a small skew margin, since a fast
+  client clock could false-trip), publish stops before uploading the archive
+  and points at `sysand auth login`. The server's `401` remains the real
+  authority; the escape hatches are re-login or an env var.
 
 ## 8. Glob scoping and conflict resolution
 
@@ -254,6 +290,16 @@ otherwise unchanged.
   additionally covers the resolved `index_root` and `api_root` when they
   diverge from it, minimal and non-overlapping. Templated URLs are anchored
   before `{path}` / `{path_raw}`.
+- **Glob derivation is escaped and pinned.** URLs can legally contain glob
+  metacharacters (an IPv6 literal `https://[::1]:8000/` reads as a globset
+  character class; `{path}` templates read as alternation), and
+  `GlobMapBuilder` uses `literal_separator(true)` (`*` does not cross `/`).
+  So the derived glob is `globset::escape(<normalized root>)` + `**`, with
+  the root normalized to end in `/` (for example
+  `https://example.com/idx/**`), and both derivation and runtime matching
+  use the same serialization (`url::Url::as_str()`) so IDN/percent-encoding
+  agree on both sides. Tests must cover: the discovery-document URL and
+  `index.json` URL match the derived glob, and an IPv6-literal login works.
 - **Divergent `api_root` (Case B).** If `api_root` nests under the derived
   root (Case A), one glob suffices. If it is a disjoint host/path, store the
   same credential under both globs (minimal, non-overlapping), so the upload
@@ -278,11 +324,18 @@ otherwise unchanged.
   index identity), so if it does not ship in the first cut the generic "no
   bearer / re-run login" hint applies. Re-login re-derives the globs and
   re-validates.
-  **Caveat:** this boundary covers the login's own globs only. A broad
-  `SYSAND_CRED_*` env pattern that also matches the moved root can still
-  shadow it (env is user-controlled and takes precedence), so the guarantee
-  is "sysand does not itself auto-follow discovery", not "no configured glob
-  can ever match the new root".
+  **Caveats, two ways the boundary is narrower than it sounds:**
+  (a) it covers the login's own globs only, a broad `SYSAND_CRED_*` env
+  pattern that also matches the moved root can still shadow it (env is
+  user-controlled and takes precedence); and (b) **same-host redirects
+  bypass the glob**: the glob is evaluated against the initial URL only, and
+  the credential is then forwarded to a same-host redirect target (existing
+  `RestrictAuthentication`/reqwest behavior), so a server that answers a
+  matched URL with `302` to another path on the same host receives the
+  credential there without any glob re-check. Cross-host redirects strip the
+  header. The precise guarantee is therefore: "sysand does not itself
+  auto-follow discovery to a **different host**"; within a host the server
+  can move the credential via redirects.
 
 **Trust model.** The discovery document at the URL you supply is the trust
 anchor: `sysand` sends the credential to the `index_root`/`api_root` it
@@ -316,11 +369,23 @@ scheme, secret, expires_at-if-known}`. Deliberate over a manifest file:
     this platform (Windows ~2.5 KB limit); remove an unused login or use a
     smaller token", and `status`/the error flag stale or expired entries so
     the user knows what to drop.
-- **Concurrency.** Read-modify-write is guarded by a **cross-process file
-  lock** at a fixed path (a lock file is not a credentials file, so it is
-  permitted, pick a path that works even when only a keyring, and no writable
-  config dir, exists), because parallel `sysand` invocations are real; an
-  in-process mutex alone would lose one writer's record.
+- **Blob format robustness.** The blob carries a `version` field; readers
+  tolerate unknown record fields (forward compat). On a parse failure
+  (interrupted write, older/newer sysand, another same-user process's
+  scribble) read-modify-write **fails closed**, "credential store
+  unreadable; remove the `sysand` keyring entry to reset", never silently
+  treats the blob as empty, which would clobber all stored logins on the
+  next `login`.
+- **Concurrency.** Read-modify-write is guarded by a **cross-process
+  advisory OS file lock** (`flock`/`LockFileEx`, via a crate like
+  `fd-lock`), never an existence-based lock file (those go stale after a
+  crash). The lock file lives in a **per-user** location
+  (`XDG_RUNTIME_DIR`/`XDG_STATE_HOME` on Linux, `%LOCALAPPDATA%` on
+  Windows, falling back to the home directory), mode `0600`, never a
+  world-writable shared path (lock squatting / symlink games), with a
+  bounded wait and a clear error. A lock file is not a credentials file, so
+  the no-plaintext rule is untouched. Parallel `sysand` invocations are
+  real; an in-process mutex alone would lose one writer's record.
 - **Consumption and keyring access.** The blob is read only when a
   credential might actually be needed, to avoid unnecessary keychain prompts.
   This requires a credential source the auth policy consults on demand. The
@@ -337,13 +402,22 @@ scheme, secret, expires_at-if-known}`. Deliberate over a manifest file:
   `try_into_publish_bearer_auth_map`, which must accept the new type. Because
   `LazyKeyringLayer` holds a cache (`OnceCell`/`Mutex`) it is not `Clone`, so
   publish's `Arc::unwrap_or_clone(...).try_into_publish_bearer_auth_map()`
-  (publish.rs) must become a **by-ref** extraction (it already clones secrets
-  into the new map), or the cache must be `Arc`-wrapped. It defers the blob
-  read to the first auth-relevant 4xx (or publish / `auth` command), reads
-  the whole blob once, and caches it for the process. Escalation semantics to
-  pin at implementation: a **failed** env credential (env 4xx) escalates into
-  the keyring layer, and when the keyring layer has no matching record it
-  re-issues the unauthenticated request to produce the final response.
+  (publish.rs) must become a **by-ref** extraction. Note this changes a
+  deliberate property: today the map is consumed precisely to **move**
+  tokens without cloning secrets; by-ref extraction introduces secret
+  clones, accepted as the cost of the lazy layer. It defers the blob read to
+  the first auth-relevant 4xx (or publish / `auth` command), reads the whole
+  blob once, and caches it for the process. Escalation semantics: a
+  **failed** env credential (env 4xx) escalates into the keyring layer; a
+  matching keyring record sends **forced** auth (not another unauth-first
+  inner sequence, which would triple requests). **No-match must not
+  re-request:** 404 is a routine outcome on the resolve path
+  (`MissingPolicy::AllowNotFound`, version probing), so stock
+  `SequenceAuthentication`, whose lower arm cannot see the higher arm's
+  response, would re-issue an identical unauthenticated request on every
+  ordinary 404, permanently doubling round-trips for logged-in users. The
+  keyring layer therefore needs a **variant combinator that passes the
+  initial response down**, returning it untouched when no record matches.
   - **Never read** for local/offline commands, for reads that succeed
     unauthenticated (public indexes return 200 and never touch the keyring),
     or for users who never ran `auth login` (no entry: a cheap "not found",
@@ -360,28 +434,38 @@ scheme, secret, expires_at-if-known}`. Deliberate over a manifest file:
   - In steady state keychain reads are silent (Windows no prompt, macOS
     one-time "always allow", unlocked Linux no re-prompt).
 - **Keyring error taxonomy:** _absent_ backend falls back to env;
-  _present-but-locked/denied_ surfaces the error and suggests unlocking,
-  never silent degrade.
-- **No-keyring host:** `auth login` refuses to persist and prints the exact
-  `SYSAND_CRED_*` lines to set instead.
+  _present-but-locked/denied_ surfaces the error, suggests unlocking, and
+  also names the `SYSAND_CRED_*` fallback, since on a headless box over SSH
+  there is often no practical way to unlock the keyring.
+- **No-keyring host:** `auth login` refuses to persist and prints the
+  `SYSAND_CRED_*` lines to set, with the pattern value exact but the secret
+  as a **`<token>` placeholder, never the entered value**: no-keyring hosts
+  are typically CI/headless where stdout lands in captured job logs, and
+  echoing the secret would defeat the hidden prompt. Honest posture note:
+  on such hosts the env fallback means the secret lives in same-user
+  process environments and typically ends up at rest in CI secret config or
+  shell rc files; that is the accepted floor there, stated in the docs.
 - **Precedence:** `SYSAND_CRED_*` > keyring > unauthenticated (source
-  precedence, §8), so CI can override an interactive login. **Env-shadow
-  warning (opportunistic):** if the keyring blob is already loaded this run
-  (some request needed it) and an env var overrode a keyring entry that would
-  have matched, warn so a stale env var does not silently authenticate with
-  an old token. It is opportunistic on purpose, forcing a keyring read on the
-  env-win path just to check for a shadow would defeat "never read the
-  keyring when env already works".
-- **Expiry:** reactive first, on a 401 against a stored credential, print
-  "credential for `<index>` may be expired or revoked; re-run
-  `sysand auth login <index>`". Proactive when known, `expires_at` (stored
-  from `v1/whoami` at login, absent for static/read-only or unvalidated
-  logins) lets `auth status` show "expires in N days / expired".
-- **`auth status` output:** per entry, the index, covered globs, `subject`
-  (from whoami, if a validating login ran), `expires_at` if stored, and
-  whether a `SYSAND_CRED_*` var shadows it, never the secret. No `scheme`
-  column in v1 (always bearer). With no keyring it lists only the active
-  `SYSAND_CRED_*` vars.
+  precedence, §8), so CI can override an interactive login. There is no
+  separate runtime shadow warning: `auth status` shows per-entry shadowing,
+  and the source-named auth-failure messages (§7) identify a stale env var
+  exactly when it bites.
+- **Expiry:** reactive first, when a request that exercised a stored
+  credential ends in **any 4xx** and the record's `expires_at` is past,
+  print "credential for `<index>` may be expired or revoked; re-run
+  `sysand auth login <index>`", any 4xx, not just 401, because
+  GitLab-style hosts answer 404 on bad auth and the blob is already loaded
+  on that path. Proactive when known, `expires_at` (stored from `v1/whoami`
+  at login, absent for static/read-only or non-validated logins) lets
+  `auth status` show "expires in N days / expired".
+- **`auth status` output:** one unified view of **everything sysand will
+  authenticate with**, both sources, each entry tagged `stored` or `env`.
+  Per stored entry: the key printed in the exact form
+  `sysand auth logout <key>` accepts, covered globs, `subject` and token
+  `prefix` (from whoami, if a validating login ran), `expires_at` if
+  stored, and whether a `SYSAND_CRED_*` var shadows it, never the secret.
+  Env entries list the variable label and pattern. No `scheme` column in v1
+  (always bearer for stored; env entries may be basic).
 - **Re-login:** `auth login` over an existing entry for the same key
   overwrites it, printing "replacing existing credential for `<index>`"
   before the write; the previous stored token is discarded locally (not
@@ -410,22 +494,32 @@ multi-account-per-host switching; git credentials (git keeps its own).
 
 Each phase is independently shippable.
 
-1. **Credential store.** Single-keyring-blob store with cross-process file
-   locking + env fallback, keyring error taxonomy, index-URL normalization,
+1. **Credential store.** Single-keyring-blob store (versioned format,
+   fail-closed on parse errors) with cross-process advisory file locking +
+   env fallback, keyring error taxonomy, index-URL normalization,
    source-precedence lookup, Windows size-limit handling. Introduce the
    **deferred/cached auth policy** that reads the blob on demand and caches
    it, replacing the eager `SYSAND_CRED_*`-only build in
-   `sysand/src/lib.rs`. Delivers persistence on its own. Crate placement per
-   §14 (store trait and policy layer in core; keyring impl behind the
-   `keyring` feature).
+   `sysand/src/lib.rs`. This phase's value is landing and soaking the risky
+   refactor with no behavior change; user-visible persistence arrives with
+   phase 3's `login` (until then only tests populate the store). Crate
+   placement per §14.
 2. **`v1/whoami`** (server side, `sysand-index` repo): identity + token
-   metadata, acceptance via HTTP status, routed at `api/v1/whoami`.
+   metadata, acceptance via HTTP status, routed at `api/v1/whoami`. **This
+   ordering is load-bearing:** if `login` shipped first, a validating login
+   against the official index (public read + advertised `api_root`) would
+   probe whoami, get a 404, count the API surface as rejected with the read
+   surface "not tested", and refuse a valid token. Record this cross-repo
+   dependency (and the §13 docs work) in `sysand-index`'s `.agents/plans/`
+   so it is not lost between repos.
 3. **`auth login` / `logout` / `status`.** Bearer-only; default-index
-   resolution; non-interactive fail-fast; discovery fetch; glob derivation
-   (discovery/index root + divergent `api_root`); `--validation true|false`
-   with forced-auth probes and the refusal rule; `expires_at` persistence;
-   env-shadow warning. The tailored discovery-drift message (§8) is
-   **best-effort** here, not required for the phase to ship.
+   resolution + echo; non-interactive fail-fast; discovery fetch; escaped
+   glob derivation (discovery/index root + divergent `api_root`);
+   `--validation true|false` with unauth-baseline-then-forced probes
+   (no-redirect), the refusal rule, and the basic-auth routing message;
+   `expires_at` persistence; source-named auth-failure messages (§7). The
+   tailored discovery-drift message (§8) is **best-effort** here, not
+   required for the phase to ship.
 4. **Docs and specs** (§12, §13). Protocol specs in this repo; user docs in
    the `sysand-index` repo (docs.sysand.com).
 
@@ -483,19 +577,26 @@ CLI). Placement follows the repo's existing pattern: `do_*` command logic in
 `core/src/commands/`, thin wrappers in `sysand/src/commands/`, optional
 capabilities behind cargo features (`filesystem`, `networking`).
 
-- **core, unconditional (wasm-safe):** the record types and blob JSON codec
-  (pure serde); a `CredentialStore` trait; the `LazyKeyringLayer` policy
-  layer generic over that trait, composed as
-  `SequenceAuthentication<EnvLayer, LazyLayer<S>>` alongside `auth.rs`.
-- **core, behind a new `keyring` cargo feature:** the OS-keyring-backed
-  `CredentialStore` impl and the cross-process file lock (uses `dirs`,
-  mirroring `filesystem`). Enabled by the CLI and the py/java bindings;
-  **off for the js/wasm binding**, since the `keyring` crate does not build
-  for wasm, this is what keeps the wasm build green. A browser-side store
-  could later implement the same trait (bindings/js already has
-  local-storage machinery), but that is not v1 and localStorage is not
-  secure storage.
-- **core `commands/auth.rs`:** `do_auth_login` / `do_auth_logout` /
+- **core, unconditional:** only the record types, blob JSON codec (pure
+  serde), and the `CredentialStore` trait.
+- **core, behind the existing `networking` feature:** the `LazyKeyringLayer`
+  policy layer and its composition with the env layer, since `auth.rs` (and
+  the `HTTPAuthentication` trait, defined over reqwest types) is already
+  gated on `networking` (`core/src/lib.rs`). Note the wasm build is green
+  today because the js binding enables neither `networking` nor
+  `filesystem`, not because of keyring gating; keeping the new policy layer
+  under `networking` preserves that. `SequenceAuthentication`'s fields are
+  currently private, so the composition needs a public constructor (or a
+  new combinator, see §9's pass-the-response-down variant).
+- **core, behind a new `keyring` cargo feature** (not in `default`): the
+  OS-keyring-backed `CredentialStore` impl and the cross-process file lock
+  (uses `dirs`, mirroring `filesystem`). Enabled by the CLI and the py/java
+  bindings; **off for the js/wasm binding**, the `keyring` crate does not
+  build for wasm. A browser-side store could later implement the same trait
+  (bindings/js already has local-storage machinery), but that is not v1 and
+  localStorage is not secure storage.
+- **core `commands/auth.rs`, gated `all(filesystem, networking)`** (the
+  same gate as publish): `do_auth_login` / `do_auth_logout` /
   `do_auth_status` orchestration (discovery fetch, glob derivation,
   validation probes, refusal rule), generic over the store trait.
   **A library call must never prompt**: the secret arrives as a parameter,
