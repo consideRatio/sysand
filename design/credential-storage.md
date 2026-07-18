@@ -197,9 +197,10 @@ URL" resolution finds the credential.
   upload URL matches exactly the api glob. Templated indexes are inherently
   Case B (their `api_root` is a disjoint plain URL).
 - Each login is one record (`{key, globs, scheme, username-if-basic,
-secret}`) inside the single keyring blob (§9), so `logout` removes it and
-  `status` shows one login covering N patterns. Globs are cached at login
-  time; re-login refreshes them if the index later relocates `api_root`.
+secret, expires_at-if-known}`) inside the single keyring blob (§9), so
+  `logout` removes it and `status` shows one login covering N patterns.
+  Globs are cached at login time; re-login refreshes them if the index
+  later relocates `api_root`.
 
 ## 9. Storage, consumption, precedence, security
 
@@ -210,7 +211,8 @@ secret}`) inside the single keyring blob (§9), so `logout` removes it and
 - **Single keyring entry.** All persisted credentials live in **one**
   keyring entry (for example `service = "sysand"`, `account =
 "credentials"`) holding a JSON blob: a list of records
-  `{key (URL or pattern), globs, scheme, username-if-basic, secret}`. This
+  `{key (URL or pattern), globs, scheme, username-if-basic, secret,
+  expires_at-if-known}`. This
   is deliberate over a separate manifest file: the `keyring` crate cannot
   portably enumerate entries, and one blob is **atomic** (metadata and
   secret cannot drift), needs **no file**, and prompts the OS keychain at
@@ -249,14 +251,23 @@ secret}`) inside the single keyring blob (§9), so `logout` removes it and
   degrading.
 - **No-keyring host:** `auth login` / `auth set` refuse to persist and
   print the exact `SYSAND_CRED_*` lines to set instead.
-- **Precedence** per URL: `SYSAND_CRED_*` > keyring > unauthenticated
-  (so CI can override an interactive login). For publish this is enforced
-  via most-specific-glob-wins (§8); for reads (try-all), a matching env
-  entry is tried before a keyring entry for the same URL.
-- **Expiry UX:** on a 401 against a stored credential, suggest re-running
-  `sysand auth login`. `v1/whoami`'s `expires_at` also enables a proactive
-  "expires in N days" note.
-- `auth status` never prints secrets.
+- **Precedence and ordering** per URL: `SYSAND_CRED_*` > keyring >
+  unauthenticated (so CI can override an interactive login). For publish
+  this is enforced via most-specific-glob-wins (§8). For reads (try-all),
+  credentials are tried most-specific glob first, env before keyring, so a
+  narrowly-scoped login is not shadowed by a broad `auth set` pattern.
+- **Expiry:** reactive first, on a 401 against a stored credential, print
+  "credential for `<index>` may be expired or revoked; re-run
+  `sysand auth login <index>`". Proactive when known, `expires_at` (stored
+  from `v1/whoami` at login, absent for static/read-only or unvalidated
+  logins) lets `auth status` show "expires in N days / expired" and warn
+  before use.
+- **`auth status` output:** per entry, the index/pattern, covered globs,
+  scheme, subject/username, `expires_at` if stored, and whether a
+  `SYSAND_CRED_*` var currently shadows it, never the secret. With no
+  keyring it lists only the active `SYSAND_CRED_*` vars.
+- **Re-login:** `auth login` over an existing entry for the same key
+  overwrites it and prints "replacing existing credential for `<index>`".
 
 ## 10. Out of scope
 
