@@ -91,19 +91,27 @@ not create duplicate entries.
 
 ## 5. Validation
 
-`auth login` takes `--validate none|read|write` (default `read`). The
-mapping: `read` = the index root, `write` = the API root.
+`auth login` takes `--validate none|index|api` (default `index`). The
+values name the surface probed, not a capability: `index` = the index read
+surface (`index_root`), `api` = the API (`api_root`). This is deliberate:
+`v1/whoami` only checks that the token is _accepted_ by the API, not that
+it can write, so a capability name like `write` would overclaim and would
+break if a read-only-api token type is ever introduced. Any future
+capability granularity is a separate dimension (for example a hypothetical
+`--require publish`), not a rename of these values.
 
-- `--validate read` (default): probe the read surface. On a private index,
+- `--validate index` (default): probe the read surface. On a private index,
   an unauth-4xx followed by an authed-2xx verifies; an authed-4xx refuses.
   On a public read surface there is nothing to check: "stored, not
   verified."
-- `--validate write`: probe `api_root/v1/whoami`. A `200` verifies (the
-  token is accepted by the API); refuse if it is rejected. Implies read
+- `--validate api`: probe `api_root/v1/whoami`. A `200` verifies (the token
+  is accepted by the API); refuse if it is rejected. Implies index-read
   under C2.
-- `--validate none`: store without a credential probe. Discovery is still
-  fetched best-effort for glob scoping (§8); if unreachable, fall back to
-  the index-root glob with a warning.
+- `--validate none`: store without a credential probe. This is the
+  index-aware counterpart to `auth set`: discovery is still fetched
+  best-effort for glob scoping (§8) and the entry is per-index, but no
+  probe runs. If discovery is unreachable, fall back to the index-root glob
+  with a warning. Use it offline, or when a probe would false-refuse.
 
 Because `api_root` is known only after reading discovery, validation is
 discovery-first: fetch discovery (with the credential, which also verifies
@@ -123,7 +131,7 @@ is credential validation and identity for `auth status`.
 
 - `GET api_root/v1/whoami`, bearer credential.
 - `200` on a valid, unexpired token; `401` otherwise. The `200` is the
-  `--validate write` pass signal.
+  `--validate api` pass signal.
 - Body on `200`:
 
 ```json
@@ -220,7 +228,7 @@ Each phase is independently shippable.
 3. **`v1/whoami`** (index server side): identity + token metadata,
    acceptance via HTTP status.
 4. **`auth login` / `auth logout`.** Discovery fetch, glob derivation
-   including divergent-`api_root` scoping, `--validate none|read|write`,
+   including divergent-`api_root` scoping, `--validate none|index|api`,
    the refusal rule, and capability-scoped output.
 5. **Enforce P2** (client): drop the plain-URL `api_root` default in
    `core/src/env/discovery.rs`; update `design/index-protocol.md`.
